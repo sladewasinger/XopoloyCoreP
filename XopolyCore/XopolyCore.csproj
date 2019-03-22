@@ -45,7 +45,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="wwwroot\index.js" />
+    <None Include="wwwroot\js\index.js" />
   </ItemGroup>
 
   <ItemGroup>
