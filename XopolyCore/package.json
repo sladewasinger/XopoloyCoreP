@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "name": "asp.net",
+  "private": true,
+  "devDependencies": {
+    "reflect-metadata": "0.1.2",
+    "zone.js": "^0.6.4",
+    "systemjs": "0.19.24",
+    "gulp": "3.9.0",
+    "del": "2.2.0",
+    "es6-promise": "3.0.2",
+    "es6-shim": "0.35.0",
+    "@aspnet/signalr": "1.0.0"
+  }
+}

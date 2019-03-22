@@ -1,0 +1,297 @@
+﻿div {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box; }
+
+.tile {
+  background-color: #eee;
+  color: #000;
+  width: 4.5vw;
+  max-width: 150px;
+  height: 100%;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  display: inline-flex;
+  -ms-flex-direction: column;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  padding: 0;
+  vertical-align: top;
+  border-top: 0.25vw solid #000;
+  border-left: 0.125vw solid #000;
+  border-right: 0.125vw solid #000;
+  border-bottom: 0.25vw solid #000;
+  position: relative;
+  height: 7.11vw;
+  max-height: calc(150px * 1.58); }
+  .tile .mortgaged-ban-symbol {
+    -webkit-text-stroke: 0.065vw #000000;
+    font-size: 1.15vw;
+    color: #b10000;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 0;
+    width: 100%; }
+  .tile .color-bar {
+    height: 21%;
+    border-bottom: 0.25vw solid #000;
+    margin-left: -0.5px;
+    margin-top: -0.5px;
+    width: 101%; }
+    .tile .color-bar .house-container {
+      font-size: 1.5vw;
+      display: inline-block;
+      text-shadow: 1px 1px #000;
+      color: lawngreen;
+      text-align: left; }
+    .tile .color-bar .hotel-container {
+      font-size: 1.5vw;
+      display: block;
+      text-shadow: 1px 1px #000;
+      color: lawngreen;
+      text-align: center; }
+  .tile .hidden-bar {
+    height: 20%;
+    border-bottom: 0.25vw solid transparent; }
+  .tile .container {
+    /*
+    //Vertical text:
+    transform: rotate(180deg);
+    writing-mode: vertical-rl;
+    */
+    padding: 15% 5% 5% 5%;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    text-align: center;
+    font-family: "Oswald", sans-serif;
+    font-size: 0.6vw;
+    -ms-word-break: break-word;
+    word-break: break-word;
+    height: 80%;
+    white-space: normal;
+    width: 100%;
+    vertical-align: middle;
+    position: relative;
+    -ms-flex: 1;
+    -webkit-flex: 1;
+    flex: 1; }
+    .tile .container .cost {
+      font-weight: bold;
+      font-size: 150%;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0.25vw; }
+    .tile .container .strikethrough-text {
+      text-decoration: line-through; }
+  .tile .go {
+    font-size: 2vw;
+    color: #f00;
+    font-weight: bold; }
+
+.Brown {
+  background-color: #7b3920; }
+
+.LightBlue {
+  background-color: #73d3ff; }
+
+.Pink {
+  background-color: #e91e63; }
+
+.Orange {
+  background-color: #fa811d; }
+
+.Red {
+  background-color: #f50c2b; }
+
+.Yellow {
+  background-color: #ffed20; }
+
+.Green {
+  background-color: #41994e; }
+
+.DarkBlue {
+  background-color: #2265ef; }
+
+.game-board {
+  position: relative; }
+
+.tilerow {
+  display: inline-block;
+  position: absolute; }
+
+.tilerow.west {
+  transform: rotate(-90deg);
+  left: -15.39vw;
+  top: 0; }
+
+.tile.west {
+  transform: translate(-50%, -50%) rotate(-90deg); }
+
+.tilerow.south {
+  top: 0;
+  left: 0; }
+
+.slider {
+  height: 7.11vw;
+  max-height: calc(150px * 1.58);
+  background-color: #000;
+  white-space: nowrap; }
+
+.slider-container {
+  width: 90vw;
+  margin-left: auto;
+  margin-right: auto;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  /* /scroll-behavior: smooth; */ }
+
+@keyframes fadein {
+  from {
+    opacity: 0; }
+  to {
+    opacity: 1; } }
+
+@-moz-keyframes fadein {
+  from {
+    opacity: 0; }
+  to {
+    opacity: 1; } }
+
+@-webkit-keyframes fadein {
+  from {
+    opacity: 0; }
+  to {
+    opacity: 1; } }
+
+.player-token-container {
+  position: relative;
+  font-size: 2vw;
+  width: 100%;
+  height: 0px;
+  -webkit-text-stroke: 2px #000;
+  text-shadow: 0.3px 0.35px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  z-index: 10;
+  -moz-animation: fadein 2s;
+  -o-animation: fadein 2s;
+  -webkit-animation: fadein 2s;
+  animation: fadein 2s;
+  white-space: normal;
+  position: absolute;
+  top: 42%;
+  left: 0;
+  right: 0;
+  text-align: center; }
+
+.player-name {
+  display: inline-block;
+  padding: 3px;
+  color: #000;
+  text-transform: none; }
+
+.player-turn {
+  border-bottom: 3px solid #ded;
+  border-radius: 10px; }
+
+.Player-Background-Red {
+  background-color: #ff8f8f; }
+
+.Player-Background-Green {
+  background-color: #8fff8f; }
+
+.Player-Background-Blue {
+  background-color: #8f8fff; }
+
+.Player-Background-Yellow {
+  background-color: #ffff8f; }
+
+.Player-Background-Cyan {
+  background-color: #8fffff; }
+
+.Player-Background-Magenta {
+  background-color: #ff8fff; }
+
+.Player-Text-Red {
+  color: #ff8f8f; }
+
+.Player-Text-Green {
+  color: #8fff8f; }
+
+.Player-Text-Blue {
+  color: #8f8fff; }
+
+.Player-Text-Yellow {
+  color: #ffff8f; }
+
+.Player-Text-Cyan {
+  color: #8fffff; }
+
+.Player-Text-Magenta {
+  color: #ff8fff; }
+
+.drawing {
+  font-size: 1.5vw;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: calc(50% + 0.5vw); }
+
+.selectable {
+  cursor: pointer; }
+
+.selectable:hover {
+  border: 0.25vw solid #fff;
+  position: relative;
+  box-shadow: 0 0 15px 3px #000; }
+
+.trade-offer {
+  display: inline-flex;
+  background-color: #444;
+  flex-direction: column;
+  margin: 10px;
+  font-size: 1vw;
+  line-height: 1.2vw; }
+  .trade-offer .title {
+    font-weight: bold;
+    background-color: #222;
+    color: #fff;
+    padding: 1vw;
+    font-size: 2vw; }
+  .trade-offer .subtitle {
+    font-weight: bold;
+    font-size: 1.3vw;
+    font-style: italic;
+    text-shadow: 1px 1px #000;
+    padding-top: 1vw;
+    padding-bottom: 1vw; }
+  .trade-offer .outgoing {
+    display: block;
+    height: 50%;
+    box-sizing: border-box;
+    border-bottom: 1px solid #aaa;
+    flex-grow: 1;
+    padding: 5px; }
+    .trade-offer .outgoing .subtitle {
+      background-color: #a00; }
+  .trade-offer .incoming {
+    display: block;
+    flex-grow: 1;
+    padding: 5px; }
+    .trade-offer .incoming .subtitle {
+      background-color: #080; }
+
+.property-color-circle {
+  border-radius: 50%;
+  width: 1vw;
+  height: 1vw;
+  display: inline-block;
+  margin-right: 5px;
+  margin-left: 5px; }

@@ -3,7 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.421
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XopolyCore", "XopolyCore\XopolyCore.csproj", "{3C421145-2884-4551-B37A-5D63F95E9A20}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XopolyCore", "XopolyCore\XopolyCore.csproj", "{3C421145-2884-4551-B37A-5D63F95E9A20}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3D09E092-7784-4904-82FD-99DC268A375C}"
+	ProjectSection(SolutionItems) = preProject
+		NuGet.config = NuGet.config
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Progopoly", "Progopoly\Progopoly.csproj", "{C4840A82-CC3D-4E64-A7AB-9DFA77DDBFED}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +22,10 @@ Global
 		{3C421145-2884-4551-B37A-5D63F95E9A20}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C421145-2884-4551-B37A-5D63F95E9A20}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C421145-2884-4551-B37A-5D63F95E9A20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4840A82-CC3D-4E64-A7AB-9DFA77DDBFED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4840A82-CC3D-4E64-A7AB-9DFA77DDBFED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4840A82-CC3D-4E64-A7AB-9DFA77DDBFED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4840A82-CC3D-4E64-A7AB-9DFA77DDBFED}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,839 @@
+﻿Array.prototype.groupBy = function (prop) {
+    return this.reduce(function (groups, item) {
+        const val = item[prop]
+        groups[val] = groups[val] || []
+        groups[val].push(item)
+        return groups
+    }, {})
+};
+
+function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+var re = /\[([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\]/i;
+function extractGuid(value) {
+
+    // the RegEx will match the first occurrence of the pattern
+    var match = re.exec(value);
+
+    // result is an array containing:
+    // [0] the entire string that was matched by our RegEx
+    // [1] the first (only) group within our match, specified by the
+    // () within our pattern, which contains the GUID value
+
+    return match ? match[1] : null;
+}
+
+$(function () {
+    //====================//
+    //Vue.js setup:
+    let vueApp = new Vue({
+        el: '#server_state',
+        data: {
+            state: {
+                Players: [],
+                Lobbies: []
+            },
+            gameState: {
+                Players: [],
+                Tiles: []
+            },
+            prevGameState: {
+                Players: [],
+                Tiles: []
+            },
+            username: null,
+            lobbyName: null,
+            lobbyID_txt: null,
+            playerID: null,
+            lobbyIsPublic: true,
+            privateLobby: null,
+            gameLog: "",
+            betAmount_txt: null,
+            gameID: null,
+            propertySelectionInProgress: false,
+            propertySelected: null,
+            prevPlayerTurnID: null,
+            prevPlayerBoardPosition: null,
+            tileClickAction: function () { },
+            propertySelectionType: "none",
+            lastDiceRollInternal: [6, 1],
+            createTradeInProgress: false,
+            tradeTargetPlayerID: null,
+            selectedTradeTargetPlayerProperties: [],
+            selectedTradeTargetPlayerMoney: 0,
+            selectedTradeMyPlayerProperties: [],
+            selectedTradeMyPlayerMoney: 0,
+            currentUIBoardPositions: [],
+            prevUIBoardPositions: [],
+            animationInProgress: false,
+            animationTimeoutHandle: null,
+            eventPopupQueue: [],
+            lobbyBarCollapsed: false,
+            localStorageName: 'XOPOLYSTORAGE',
+            showTradeOffersEnabled: false,
+            infoTile: null
+        },
+        computed: {
+            isPlayerRegistered: function () {
+                return this.isPlayerRegistered = (this.playerID ? true : false) && this.state.Players && this.state.Players.some(p => p.ComputerUserID == this.playerID);
+            },
+            isPlayerInLobby: function () {
+                return this.state.Lobbies.some(lobby => lobby.Players.some(p => p.ComputerUserID == this.playerID));
+            },
+            playerOwnsALobby: function () {
+                return this.state.Lobbies.some(lobby => lobby.Owner.ComputerUserID == this.playerID);
+            },
+            gamePlayer: function () {
+                let myPlayerList = this.gameState.Players.filter(p => p.ID == this.gameID);
+                if (myPlayerList && myPlayerList.length > 0)
+                    return myPlayerList[0];
+                else
+                    return null;
+            },
+            ownedProperties: function () {
+                let ownedProps = [];
+                if (this.gameID != null && this.gameState.Tiles)
+                    ownedProps = this.gameState.Tiles.filter(t => t.OwnerPlayerID == this.gameID)
+                return ownedProps;
+            },
+            gameInProgress: function () {
+                return this.isPlayerInLobby && this.gameState && this.gameState.Players.length > 0;
+            },
+            isPlayersTurn: function () {
+                return this.gameInProgress &&
+                    this.gameState.CurrentPlayer.ID == this.gameID &&
+                    !this.animationInProgress;
+            },
+            canEndTurn: function () {
+                let curPlayer = this.gameState.CurrentPlayer;
+                return this.isPlayersTurn &&
+                    curPlayer.CurrentDiceRoll &&
+                    (!curPlayer.CurrentDiceRoll.IsDouble || curPlayer.IsInJail) &&
+                    !this.gameState.WaitForBuyOrAuctionStart;
+            },
+            canBuy: function () {
+                return this.isPlayersTurn &&
+                    !this.propertySelectionInProgress &&
+                    this.gameState.WaitForBuyOrAuctionStart &&
+                    this.gameState.CurrentPlayer.Money >= this.gameState.CurrentTile.Cost;
+            },
+            canAuction: function () {
+                return this.isPlayersTurn &&
+                    !this.propertySelectionInProgress &&
+                    this.gameState.WaitForBuyOrAuctionStart;
+            },
+            canBetOnAuction: function () {
+                return this.gameState.Auction &&
+                    this.gamePlayer.Money > 0 &&
+                    !this.gameState.Auction.AuctionParticipants.filter(x => x.ID == this.gameID)[0].HasPlacedBet;
+            },
+            canPayJailFee: function () {
+                return this.isPlayersTurn &&
+                    !this.propertySelectionInProgress &&
+                    this.gameState.CurrentPlayer.IsInJail &&
+                    !this.gameState.CurrentPlayer.CurrentDiceRoll;
+            },
+            canBuild: function () {
+                var canBuild = false;
+
+                if (this.isPlayersTurn && this.ownedProperties.length > 1) {
+                    let coloredProperties = this.gameState.Tiles.filter(x => x.Type == 'ColorProperty').groupBy('Color');
+                    canBuild = Object.keys(coloredProperties).some(key =>
+                        coloredProperties[key].every(prop => prop.OwnerPlayerID == this.gameID) &&
+                        coloredProperties[key].every(prop => !prop.IsMortgaged) &&
+                        coloredProperties[key].some(prop => prop.BuildingCount < 5));
+                }
+
+                canBuild = canBuild || (this.propertySelectionInProgress && this.propertySelectionType == "BuildHouse");
+
+                return canBuild;
+            },
+            canSell: function () {
+                var canSell = false;
+
+                if (this.isPlayersTurn && this.ownedProperties.length > 1) {
+                    let coloredProperties = this.gameState.Tiles.filter(x => x.Type == 'ColorProperty').groupBy('Color');
+                    canSell = Object.keys(coloredProperties).some(key =>
+                        coloredProperties[key].some(prop => prop.BuildingCount > 0));
+                }
+
+                canSell = canSell || (this.propertySelectionInProgress && this.propertySelectionType == "SellHouse");
+
+                return canSell;
+            },
+            canBankruptcy: function () {
+                return this.isPlayersTurn
+                    && this.gameState.CurrentPlayer.Money < 0;
+            },
+            canRollDice: function () {
+                return this.isPlayersTurn &&
+                    !this.propertySelectionInProgress &&
+                    !this.gameState.WaitForBuyOrAuctionStart &&
+                    this.gameState.CurrentPlayer.Money >= 0 &&
+                    (!this.gameState.CurrentPlayer.CurrentDiceRoll || this.gameState.CurrentPlayer.CurrentDiceRoll.IsDouble);
+            },
+            canMortgageProperty: function () {
+                var canMortgage = false;
+
+                canMortgage = this.isPlayersTurn &&
+                    this.ownedProperties.length > 0 &&
+                    this.ownedProperties.some(x => !x.IsMortgaged);
+
+                let coloredPropertyGroups = this.gameState.Tiles.filter(x => x.Type == 'ColorProperty').groupBy('Color');
+                let ownedMonopolyColors = Object.keys(coloredPropertyGroups).filter(key => coloredPropertyGroups[key].every(prop => prop.OwnerPlayerID == this.gameID));
+                let ownedMonopolies = ownedMonopolyColors.map(k => coloredPropertyGroups[k]);
+                if (ownedMonopolies &&
+                    ownedMonopolies.length > 0 &&
+                    ownedMonopolies.every(monopolyProps => monopolyProps.some(prop => prop.BuildingCount > 0) || monopolyProps.every(prop => prop.IsMortgaged)) &&
+                    !this.ownedProperties
+                        .filter(x => !ownedMonopolies.some(monopolyProps => monopolyProps.some(prop => prop.ID == x.ID)))
+                        .some(prop => !prop.IsMortgaged)) {
+                    canMortgage = false;
+                }
+
+                canMortgage = canMortgage || (this.propertySelectionInProgress && this.propertySelectionType == "MortgageProperty");
+
+                return canMortgage;
+            },
+            canRedeemProperty: function () {
+                return this.isPlayersTurn &&
+                    this.ownedProperties.length > 0 &&
+                    (this.ownedProperties.some(x => x.IsMortgaged) || (this.propertySelectionInProgress && this.propertySelectionType == "RedeemProperty"));
+            },
+            canCreateTrade: function () {
+                return this.isPlayersTurn &&
+                    !this.createTradeInProgress &&
+                    this.otherPlayers && this.otherPlayers.length > 0;
+            },
+            lastDiceRoll: function () {
+                if (this.gameState.CurrentPlayer.CurrentDiceRoll) {
+                    this.lastDiceRollInternal = this.gameState.CurrentPlayer.CurrentDiceRoll.Dice;
+                } else if (this.gameState.Players.some(x => x.CurrentDiceRoll && x.CurrentDiceRoll.Dice)) {
+                    this.lastDiceRollInternal = this.gameState.Players.filter(x => x.CurrentDiceRoll && x.CurrentDiceRoll.Dice)[0].CurrentDiceRoll.Dice;
+                }
+
+                return this.lastDiceRollInternal;
+            },
+            otherPlayers: function () {
+                let _gameID = this.gameID;
+                return this.gameState.Players.filter(x => x.ID != _gameID);
+            },
+            isStageTwoAction: function () {
+                return this.canBuy || this.canAuction || this.canBetOnAuction || this.gameState.Auction;
+            },
+            playerHasTradeOffers: function () {
+                return this.gameState.TradeOffers.some(x => x.PlayerB.ID == this.gameID);
+            },
+            playersTradeOffers: function () {
+                return this.gameState.TradeOffers.filter(x => x.PlayerB.ID == this.gameID);
+            }
+        },
+        methods: {
+            enableShowTradeOffers: function () {
+                this.showTradeOffersEnabled = true;
+            },
+            disableShowTradeOffers: function () {
+                this.showTradeOffersEnabled = false;
+            },
+            playerHasExistingTradeOfferWith: function (playerB_ID) {
+                return this.gameState.TradeOffers.some(x => x.PlayerB.ID == playerB_ID && x.PlayerA.ID == this.gameID);
+            },
+            disconnectFromHub: function () {
+                $.connection.hub.stop();
+            },
+            setLocalStorageData: function (localData) {
+                localStorage.setItem(this.localStorageName, JSON.stringify(localData));
+            },
+            getLocalStorageData: function () {
+                let localData = {};
+                let localDataRaw = localStorage.getItem(this.localStorageName);
+                localData = JSON.parse(localDataRaw) || localData;
+
+                return localData;
+            },
+            setLocalStorageDataItem: function (key, value) {
+                let localData = this.getLocalStorageData();
+                localData[key] = value;
+                this.setLocalStorageData(localData);
+            },
+            registerPlayer: function () {
+                if (!this.username) {
+                    return;
+                }
+                console.log("Attempting to register player", this.username);
+                lobbyHub.server.registerPlayer(this.username).done(() => {
+                    this.setLocalStorageDataItem('username', this.username);
+                }).fail(function (error) {
+                    console.log("register player failed: ", error);
+                });
+            },
+            createLobby: function () {
+                lobbyHub.server.createLobby(this.lobbyName, this.lobbyIsPublic);
+            },
+            refreshState: function () {
+                lobbyHub.server.requestStateUpdate();
+            },
+            disconnectFromLobby: function () {
+                this.lobbyID_txt = null;
+                this.lobbyName = null;
+                this.gameState = {
+                    Players: [],
+                    Tiles: []
+                };
+                lobbyHub.server.disconnectFromLobby();
+            },
+            joinLobby: function (lobbyID) {
+                lobbyHub.server.joinLobby(lobbyID);
+            },
+            spectateLobby: function (lobbyID) {
+                lobbyHub.server.spectateLobby(lobbyID);
+            },
+            updatePlayer: function (player) {
+                this.playerID = player.ComputerUserID;
+                this.username = player.Username;
+                this.gameID = player.GameID;
+            },
+            updatePrivateLobby: function (privateLobby) {
+                this.privateLobby = privateLobby;
+            },
+            disconnectPlayer: function () {
+                console.log("disconnecting player");
+                this.lobbyID_txt = null;
+                this.lobbyName = null;
+                this.gameState = {
+                    Players: [],
+                    Tiles: []
+                };
+                this.state = {
+                    Players: [],
+                    Lobbies: []
+                };
+                this.playerID = null;
+                this.username = null;
+                lobbyHub.server.disconnectPlayer();
+            },
+            startGame: function () {
+                lobbyHub.server.startGame();
+                this.lobbyBarCollapsed = true;
+            },
+            rollDice: function () {
+                lobbyHub.server.rollDice();
+            },
+            updateGameLog: function (gameLog) {
+                this.gameLog = gameLog;
+            },
+            buyProperty: function () {
+                lobbyHub.server.buyProperty();
+            },
+            betOnAuction: function () {
+                lobbyHub.server.betOnAuction(this.betAmount_txt || 0);
+            },
+            startAuction: function () {
+                lobbyHub.server.startAuctionOnProperty();
+            },
+            endTurn: function () {
+                this.createTradeInProgress = false;
+                this.propertySelectionInProgress = false;
+                lobbyHub.server.endTurn();
+            },
+            getTileClasses: function (tile) {
+                var tileClass = "";
+
+                if (tile.OwnerPlayerID) {
+                    tileClass += " Player-Background-" +
+                        this.gameState.Players.filter(p => p.ID == tile.OwnerPlayerID)[0].Color;
+                }
+                if (this.propertySelectionInProgress) {
+                    if (tile.OwnerPlayerID == this.gameID &&
+                        (this.canMortgageTile(tile) && this.propertySelectionType == "MortgageProperty") ||
+                        (tile.IsMortgaged && this.propertySelectionType == "RedeemProperty") ||
+                        (this.canBuildOnTile(tile) && this.propertySelectionType == "BuildHouse") ||
+                        (tile.BuildingCount > 0 && this.propertySelectionType == "SellHouse")) {
+                        tileClass += " selectable";
+                    } else {
+                        tileClass += " unselectable";
+                    }
+                }
+                if (tile.Type == "ColorProperty") {
+                    tileClass += " property";
+                } else if (tile.Type == "Chance") {
+                    tileClass += " chance";
+                } else if (tile.Type == 'Railroad') {
+                    tileClass += " railroad";
+                } else if (tile.Name == "Income Tax") {
+                    tileClass += " fee income-tax";
+                } else if (tile.Name == "Luxury Tax") {
+                    tileClass += " fee luxury-tax";
+                } else if (tile.Type == "CommunityChest") {
+                    tileClass += " community-chest";
+                }
+
+                return tileClass;
+            },
+            getPlayerTextColorClass: function (player) {
+                var playerTurnClass = "";
+
+                return "Player-Text-" + player.Color + " " + playerTurnClass;
+            },
+            buyOutOfJail: function () {
+                lobbyHub.server.buyOutOfJail();
+            },
+            startBuildHouse: function (event) {
+                event.stopPropagation();
+                if (this.propertySelectionType == "BuildHouse" && this.propertySelectionInProgress) {
+                    this.propertySelectionInProgress = false;
+                    return;
+                }
+                this.propertySelectionInProgress = true;
+                this.tileClickAction = this.buildHouse;
+                this.propertySelectionType = "BuildHouse";
+            },
+            startSellHouse: function (event) {
+                event.stopPropagation();
+                if (this.propertySelectionType == "SellHouse" && this.propertySelectionInProgress) {
+                    this.propertySelectionInProgress = false;
+                    return;
+                }
+                this.propertySelectionInProgress = true;
+                this.tileClickAction = this.sellHouse;
+                this.propertySelectionType = "SellHouse";
+            },
+            startMortgageProperty: function (event) {
+                event.stopPropagation();
+                if (this.propertySelectionType == "MortgageProperty" && this.propertySelectionInProgress) {
+                    this.propertySelectionInProgress = false;
+                    return;
+                }
+                this.propertySelectionInProgress = true;
+                this.tileClickAction = this.mortgageProperty;
+                this.propertySelectionType = "MortgageProperty";
+            },
+            startRedeemProperty: function (event) {
+                event.stopPropagation();
+                if (this.propertySelectionType == "RedeemProperty" && this.propertySelectionInProgress) {
+                    this.propertySelectionInProgress = false;
+                    return;
+                }
+                this.propertySelectionInProgress = true;
+                this.tileClickAction = this.redeemProperty;
+                this.propertySelectionType = "RedeemProperty";
+            },
+            tileClicked: function (event) {
+                event.stopPropagation();
+                if (!this.gameInProgress || !this.propertySelectionInProgress) {
+                    return;
+                }
+                var tile = event.currentTarget;
+                var tileID = tile.id;
+                if (this.gameState.Tiles[tileID].OwnerPlayerID == this.gameID) {
+                    this.tileClickAction(tileID);
+                }
+            },
+            centerClicked: function (event) {
+                if (this.propertySelectionType && this.propertySelectionInProgress) {
+                    this.propertySelectionInProgress = false;
+                }
+            },
+            buildHouse: function (tileIndex) {
+                lobbyHub.server.buildHouse(tileIndex);
+            },
+            sellHouse: function (tileIndex) {
+                lobbyHub.server.sellHouse(tileIndex);
+            },
+            mortgageProperty: function (tileIndex) {
+                lobbyHub.server.mortgageProperty(tileIndex);
+            },
+            redeemProperty: function (tileIndex) {
+                lobbyHub.server.redeemProperty(tileIndex);
+            },
+            instantMonopoly: function (tileIndex) {
+                lobbyHub.server.instantMonopoly();
+            },
+            getLogEntryClass: function (entry) {
+                let playerID = extractGuid(entry);
+                if (playerID) {
+                    var player = this.gameState.Players.find(x => x.ID == playerID);
+                    if (player)
+                        return "Player-Text-" + player.Color;
+                }
+                return "";
+            },
+            declareBankruptcy: function () {
+                lobbyHub.server.declareBankruptcy();
+            },
+            startCreateTrade: function () {
+                this.tradeTargetPlayerID = this.otherPlayers[0].ID;
+                this.createTradeInProgress = true;
+            },
+            cancelCreateTrade: function () {
+                this.createTradeInProgress = false;
+                this.clearTradeOfferData();
+            },
+            sendTrade: function () {
+                lobbyHub.server.offerTrade(
+                    this.tradeTargetPlayerID,
+                    this.selectedTradeMyPlayerProperties,
+                    this.selectedTradeTargetPlayerProperties,
+                    this.selectedTradeMyPlayerMoney,
+                    this.selectedTradeTargetPlayerMoney);
+                this.createTradeInProgress = false;
+                this.clearTradeOfferData();
+            },
+            acceptTrade: function (tradeOfferID) {
+                lobbyHub.server.acceptTrade(tradeOfferID);
+                if (!this.playerHasTradeOffers) {
+                    this.disableShowTradeOffers();
+                }
+            },
+            rejectTrade: function (tradeOfferID) {
+                lobbyHub.server.rejectTrade(tradeOfferID);
+                if (!this.playerHasTradeOffers) {
+                    this.disableShowTradeOffers();
+                }
+            },
+            clearTradeOfferData: function () {
+                this.selectedTradeTargetPlayerProperties = [];
+                this.selectedTradeTargetPlayerMoney = 0;
+                this.selectedTradeMyPlayerProperties = [];
+                this.selectedTradeMyPlayerMoney = 0;
+            },
+            updatePlayerPositions: function (ignoreLogic = false) {
+                if (!this.gameInProgress || this.gameState.Players.length == 0)
+                    return;
+
+                //Wait for initial game state to load in Vue:
+                for (var i = 0; i < this.gameState.Players.length; i++) {
+                    var player = this.gameState.Players[i];
+
+                    if (this.currentUIBoardPositions[player.ID] === undefined) {
+                        //initial game movement
+                        console.log("initial player movement");
+                        this.movePlayerClockwise(player, player.BoardPosition);
+                        continue;
+                    }
+
+                    //This handles the case of landing on chance and being moved to another board position "instantly"
+                    //i.e. player moves twice, but UI only gets one GameState update.
+                    if (player.PrevBoardPosition != this.prevUIBoardPositions[player.ID] && player.PrevBoardPosition != this.currentUIBoardPositions[player.ID]) {
+                        //In-between (technically 2 movements, but only 1 gamestate)
+                        console.log("detected two movements between prev game state and current!");
+                        this.movePlayerClockwise(player, player.PrevBoardPosition);
+
+                        window.clearTimeout(this.animationTimeoutHandle);
+                        //this.animationTimeoutHandle = setTimeout(() => this.animationInProgress = false, 1600);
+
+                        //Go DIRECTLY to jail OR go back three spaces OR go to nearest railroad, etc.:
+                        if (player.WasDirectMovement) {
+                            console.log("direct movement");
+                            setTimeout(this.movePlayerDirect, 1500, player, player.BoardPosition);
+                        } else {
+                            console.log("clockwise movement");
+                            setTimeout(this.movePlayerClockwise, 1500, player, player.BoardPosition);
+                        }
+                    } else if (player.IsInJail && player.WasDirectMovement && player.BoardPosition != this.currentUIBoardPositions[player.ID]) {
+                        console.log("direct movement to jail for overspeeding!");
+                        this.movePlayerDirect(player, player.BoardPosition);
+                    } else if (player.BoardPosition != this.currentUIBoardPositions[player.ID]) {
+                        //Typical movement:
+                        console.log("normal movement");
+                        this.movePlayerClockwise(player, player.BoardPosition);
+                    } else if (ignoreLogic) {
+                        //assume window update:
+                        console.log("window update player position");
+                        this.movePlayerDirect(player, player.BoardPosition, 1, true);
+                    }
+                }
+            },
+            createMovementEventPopups: function (player, currentBoardPosition, targetBoardPosition) {
+                if (targetBoardPosition == currentBoardPosition
+                    && this.gameState.Tiles[targetBoardPosition].Type == 'Chance'
+                    && this.gameState.ChanceDeck.CurrentPlayerCardText) {
+                    this.createEventPopup("Chance", this.gameState.ChanceDeck.CurrentPlayerCardText, 2000);
+                }
+                if (targetBoardPosition == currentBoardPosition
+                    && this.gameState.Tiles[targetBoardPosition].Type == 'CommunityChest'
+                    && this.gameState.CommunityChestDeck.CurrentPlayerCardText) {
+                    this.createEventPopup("Community Chest", this.gameState.CommunityChestDeck.CurrentPlayerCardText, 2000);
+                }
+
+                var playerIdx = this.gameState.Players.indexOf(player);
+                var playerPrevState = playerIdx != -1 ? this.prevGameState.Players[playerIdx] : null;
+                if (playerPrevState && player.PrevBoardPosition != 0 && currentBoardPosition == 0 && playerPrevState.BoardPosition == player.PrevBoardPosition) {
+                    this.createEventPopup("Salary", player.Name + " collected $200 for passing Go!", 1500);
+                }
+
+                if (this.gameState.CurrentTile.Type == "Jail" && player.WasDirectMovement && player.IsInJail && currentBoardPosition == 30) {
+                    this.createEventPopup("Jail", player.Name + " got sent to jail!", 2000);
+                }
+                if (this.gameState.CurrentTile.Type == "Jail"
+                    && player.WasDirectMovement
+                    && player.IsInJail
+                    && player.PrevBoardPosition != 30
+                    && playerPrevState && playerPrevState.CurrentDiceRoll && playerPrevState.CurrentDiceRoll.IsDouble
+                    && currentBoardPosition == playerPrevState.BoardPosition) {
+                    this.createEventPopup("Jail", player.Name + " got sent to jail for overspeeding!", 2000);
+                }
+            },
+            createEventPopup: function (title, message, duration) {
+                let eventPopup = {};
+                eventPopup.Title = title;
+                eventPopup.Message = message;
+                eventPopup.Duration = duration;
+                eventPopup.ID = "event_popup_" + uuidv4();
+
+                let idx = this.eventPopupQueue.push(eventPopup) - 1; //.push() returns length of new array
+
+                setTimeout(function (_this, idx, event) {
+                    $("#" + event.ID).fadeOut("slow", function () {
+                        _this.eventPopupQueue = _this.eventPopupQueue.filter(x => x.ID != event.ID);
+                    });
+                }, eventPopup.Duration, this, idx, eventPopup);
+            },
+            movePlayerClockwise: function (player, targetBoardPosition) {
+                var currentBoardPosition = this.currentUIBoardPositions[player.ID] || 0;
+
+                for (var iter = 0; iter < 41; iter++) {
+                    this.animationInProgress = true;
+
+                    var targetPos = this.getPlayerTilePos(player, currentBoardPosition);
+                    this.animatePlayerMovement(player, targetPos, 110, currentBoardPosition, targetBoardPosition);
+
+                    if (currentBoardPosition == targetBoardPosition)
+                        break;
+
+                    currentBoardPosition++;
+                    if (currentBoardPosition >= 40)
+                        currentBoardPosition = 0;
+                }
+
+                this.prevUIBoardPositions[player.ID] = this.currentUIBoardPositions[player.ID] || 0;
+                this.currentUIBoardPositions[player.ID] = targetBoardPosition;
+                //console.log("Reached target board position! (prev, curr)", this.prevUIBoardPositions[player.ID], this.currentUIBoardPositions[player.ID]);
+            },
+            movePlayerDirect: function (player, targetBoardPosition, animationLength = 1000, ignoreLogic = false) {
+                var playerDiv = $("#player_token_" + player.ID);
+                var targetPos = this.getPlayerTilePos(player, targetBoardPosition);
+
+                if (ignoreLogic) {
+                    playerDiv.css(targetPos);
+                    this.animationInProgress = false;
+                    return;
+                }
+
+                this.animatePlayerMovement(player, targetPos, animationLength, targetBoardPosition, targetBoardPosition);
+
+                this.prevUIBoardPositions[player.ID] = this.currentUIBoardPositions[player.ID] || 0;
+                this.currentUIBoardPositions[player.ID] = targetBoardPosition;
+            },
+            getPlayerTilePos: function (player, targetBoardPosition) {
+                let nextTilePos = $('#' + targetBoardPosition).offset();
+
+                let posOffset = { left: 0, top: 0 };
+                let playersOnSameSpot = this.gameState.Players.filter(x => x.ID != player.ID && x.BoardPosition == targetBoardPosition)
+                if (playersOnSameSpot && playersOnSameSpot.length > 0) {
+                    let playerPriority = this.gameState.Players.indexOf(player) + 1;
+                    posOffset.left = 6 * playerPriority;
+                    posOffset.top = 3 * playerPriority;
+                }
+                if (player.IsInJail && targetBoardPosition == 10) {
+                    posOffset.left += 30;
+                }
+
+                return {
+                    left: nextTilePos.left + posOffset.left,
+                    top: nextTilePos.top + posOffset.top
+                };
+            },
+            animatePlayerMovement: function (player, pos, animationDuration, currentBoardPosition, targetBoardPosition) {
+                var div = $("#player_token_" + player.ID);
+                let args = [player, currentBoardPosition, targetBoardPosition];
+
+                this.animationInProgress = true;
+
+                div.animate(
+                    {
+                        left: pos.left,
+                        top: pos.top
+                    },
+                    animationDuration,
+                    () => {
+                        window.clearTimeout(this.animationTimeoutHandle);
+                        this.animationTimeoutHandle = setTimeout(() => {
+                            this.animationInProgress = false;
+                        }, animationDuration * 1.1);
+
+                        this.createMovementEventPopups(args[0], args[1], args[2]);
+                    });
+            },
+            canBuildOnTile: function (tile) {
+                var canBuild = false;
+
+                if (tile.Color && tile.OwnerPlayerID == this.gameID && this.ownedProperties.length > 1 && tile.BuildingCount < 5) {
+                    let coloredProperties = this.gameState.Tiles.filter(x => x.Type == 'ColorProperty').groupBy('Color');
+                    canBuild = coloredProperties[tile.Color].every(prop => prop.OwnerPlayerID == this.gameID && !prop.IsMortgaged);
+                }
+
+                return canBuild;
+            },
+            canMortgageTile: function (tile) {
+                var canMortgage = !tile.IsMortgaged &&
+                    (!tile.BuildingCount || tile.BuildingCount == 0);
+
+                if (tile.Color && tile.OwnerPlayerID == this.gameID && this.ownedProperties.length > 1) {
+                    let coloredProperties = this.gameState.Tiles.filter(x => x.Type == 'ColorProperty').groupBy('Color');
+                    if (coloredProperties[tile.Color].some(prop => prop.BuildingCount > 0))
+                        canMortgage = false;
+                }
+
+                return canMortgage;
+            },
+            collapseLobbyBar: function () {
+                this.lobbyBarCollapsed = !this.lobbyBarCollapsed;
+            },
+            checkForNotifications: function () {
+                if (!this.prevGameState || !this.gameState)
+                    return;
+                if (this.prevGameState.Auction && !this.gameState.Auction) {
+                    var auctionedProperty = this.gameState.Tiles.find(t => t.ID == this.prevGameState.CurrentTile.ID);
+                    var auctionWinner = this.gameState.Players.find(x => x.ID == auctionedProperty.OwnerPlayerID);
+                    var auctionWinnerBetAmount = this.prevGameState.Players.find(x => x.ID == auctionWinner.ID).Money - auctionWinner.Money;
+                    var msg = "Player '" + auctionWinner.Name + "' won auction for property '" + auctionedProperty.Name + "' for $" +
+                        auctionWinnerBetAmount + "!";
+                    this.createEventPopup("Auction Finished", msg, 2000);
+                }
+            },
+            setInfoTile: function (event, tile) {
+                event.stopPropagation();
+
+                if (tile && tile.MortgageValue) {
+                    this.infoTile = tile;
+                } else {
+                    this.infoTile = null;
+                }
+            }
+        }
+    })
+
+    //====================//
+    //SignalR 2 setup:
+    // var lobbyHub = $.connection.lobbyHub;
+
+    //.net core client:
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/lobbyhub")
+        .configureLogging(signalR.LogLevel.Information)
+        .build();
+
+    //lobbyHub.client.updateState = function (state) {
+    //    console.log("Received new state:", state);
+    //    vueApp.state = state;
+    //    if (state.Player != null) {
+    //        vueApp.updatePlayer(state.Player);
+    //    }
+
+    //    if (state.Lobbies.some(lobby => lobby.Owner.ComputerUserID == vueApp.playerID)) {
+    //        var ownedLobby = state.Lobbies.filter(lobby => lobby.Owner.ComputerUserID == vueApp.playerID)[0];
+    //        vueApp.lobbyName = ownedLobby.Name;
+    //    }
+    //};
+
+    connection.on("updateState", (state) => {
+        console.log("Received new state:", state);
+        vueApp.state = state;
+        if (state.Player != null) {
+            vueApp.updatePlayer(state.Player);
+        }
+
+        if (state.Lobbies.some(lobby => lobby.Owner.ComputerUserID == vueApp.playerID)) {
+            var ownedLobby = state.Lobbies.filter(lobby => lobby.Owner.ComputerUserID == vueApp.playerID)[0];
+            vueApp.lobbyName = ownedLobby.Name;
+        }
+    });
+
+    //lobbyHub.client.updateGameState = function (gameState) {
+    //    console.log("NEW GAME STATE: ", gameState);
+    //    if (!vueApp.gameInProgress) {
+    //        vueApp.lobbyBarCollapsed = true;
+    //    }
+    //    if (gameState.Players.length == 0) {
+    //        vueApp.disconnectFromLobby();
+    //        return;
+    //    }
+    //    vueApp.prevGameState = vueApp.gameState;
+    //    vueApp.gameState = gameState;
+    //    vueApp.$nextTick(() => {
+    //        vueApp.updatePlayerPositions();
+    //    });
+    //    vueApp.checkForNotifications();
+    //};
+
+    connection.on("updateState", (gameState) => {
+        console.log("NEW GAME STATE: ", gameState);
+        if (!vueApp.gameInProgress) {
+            vueApp.lobbyBarCollapsed = true;
+        }
+        if (gameState.Players.length == 0) {
+            vueApp.disconnectFromLobby();
+            return;
+        }
+        vueApp.prevGameState = vueApp.gameState;
+        vueApp.gameState = gameState;
+        vueApp.$nextTick(() => {
+            vueApp.updatePlayerPositions();
+        });
+        vueApp.checkForNotifications();
+    });
+
+    connection.on("updateGameLog", vueApp.updateGameLog);
+
+    //START THE HUB:
+    // !! NOTE !! All hub connections must be made (in JS) before this line so they are "wired up" before the hub tries to call them.
+
+
+    connection
+        .start()
+        .then(function () {
+            Main();
+        })
+        .catch(function (error) {
+            console.error("SignalR connection failed: " + error);
+            //setTimeout(() => window.location.href = '', 7000);
+        });
+
+    //$.connection.hub.url = "/lobbyhub";
+    //$.connection.hub.start().done(function () {
+    //    Main();
+    //}).fail(function (error) {
+    //    console.log("SignalR connection failed: " + error);
+    //    //setTimeout(() => window.location.href = '', 7000);
+    //});
+
+    //====================//
+    //Main:
+    function Main() {
+        console.log("lobby hub connected!");
+        $(window).on("unload", vueApp.disconnectFromHub);
+        $(window).on('beforeunload', () => {
+            vueApp.disconnectFromHub();
+            return;
+        });
+        $(window).on("resize", function () { vueApp.updatePlayerPositions(true); });
+
+        AutoLogin();
+
+        if (window.test) {
+            window.test(vueApp);
+        }
+    }
+
+    function AutoLogin() {
+        let localData = vueApp.getLocalStorageData();
+        vueApp.username = localData.username;
+        vueApp.registerPlayer();
+    }
+});

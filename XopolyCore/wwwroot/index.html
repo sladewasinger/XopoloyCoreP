@@ -1,0 +1,391 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>x-opoly</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css?family=Oswald:300,400,500" rel="stylesheet" />
+    <link href="css/index.min.css" rel="stylesheet" />
+    <link href="css/monopoly-board.min.css" rel="stylesheet" />
+    <script src="scripts/lib/jquery-3.3.1.js"></script>
+    <script src="scripts/lib/jquery.signalR-2.4.0.js"></script>
+    <script src="scripts/lib/vue.js"></script>
+</head>
+<body>
+    <div id="server_state">
+        <div class="lobby-bar">
+            <div v-bind:class="{ 'collapsed': lobbyBarCollapsed }">
+                <div>
+                    <input tabindex="1" type="text" id="username" maxlength="10" placeholder="username" autocomplete="false"
+                           @keyup.enter="registerPlayer" v-model="username" v-bind:disabled="isPlayerRegistered" v-bind:class="{ 'disabled': isPlayerRegistered }" />
+                    <button id="register_btn"
+                            v-on:click="registerPlayer" v-if="!isPlayerRegistered" class="{ 'disabled': !username || username.length <= 0 }">
+                        Join
+                    </button>
+                    <button id="logout_btn"
+                            v-on:click="disconnectPlayer" v-if="isPlayerRegistered">
+                        Logout
+                    </button>
+                </div>
+                <div v-bind:class="{ 'disabled': !isPlayerRegistered || isPlayerInLobby }">
+                    <div>
+                        <input tabindex="2" type="text" id="lobby_name" maxlength="20" placeholder="lobby name"
+                               v-model="lobbyName" @keyup.enter="createLobby" v-bind:disabled="!isPlayerRegistered || isPlayerInLobby" />
+                        <button id="create_lobby_btn" v-on:click="createLobby">Create Lobby</button>
+                        <label>
+                            Public:<input type="checkbox" v-model="lobbyIsPublic" v-bind:id="lobbyIsPublic" value="true">
+                        </label>
+                    </div>
+                    <div>
+                        <input tabindex="3" type="text" id="private_lobby_txt" maxlength="3"
+                               v-model="lobbyID_txt" placeholder="lobby code" @keyup.enter="joinLobby(lobbyID_txt)" v-bind:disabled="!isPlayerRegistered || isPlayerInLobby" />
+                        <button id="join_private_lobby_btn" v-on:click="joinLobby(lobbyID_txt)">Join Lobby</button>
+                    </div>
+                </div>
+                <div class="card-deck" v-bind:class="{ 'disabled': !isPlayerRegistered }">
+                    <div id="players" class="card">
+                        <h1>Players:</h1>
+                        <ul>
+                            <li v-for="player in state.players">
+                                {{ player.username }}
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="lobbies" class="card">
+                        <h1>Public Lobbies:</h1>
+                        <ul id="lobbies_list">
+                            <li v-for="lobby in state.lobbies.filter(lobby => lobby.public)" v-bind:class="{ 'disabled': !isPlayerRegistered }">
+                                {{ lobby.name }} [ <b class="important-txt">{{ lobby.id }}</b> ]
+                                <i v-if="!lobby.open">(in game)</i>
+                                <!--<i v-if="lobby.players.some(p => p.computerUserID == playerID && p.isSpectator)"
+                                   class="lobby-button fas fa-eye-slash"></i>-->
+                                <i v-if="!isPlayerInLobby"
+                                   v-on:click="spectateLobby(lobby.id)"
+                                   class="lobby-button clickable far fa-eye"></i>
+                                <i v-if="lobby.open && !isPlayerInLobby"
+                                   v-on:click="joinLobby(lobby.id)" class="lobby-button clickable fas fa-plug"></i>
+                                <i v-if="lobby.players.some(function(p) { return p.computerUserID == playerID; })" v-on:click="disconnectFromLobby"
+                                   class="lobby-button clickable fas fa-times"></i>
+                                <ul>
+                                    <li v-for="player in lobby.players"><i v-if="player.isSpectator" class="far fa-eye"></i>&nbsp;{{ player.username }}</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    <div id="private_lobbies" class="card">
+                        <h1>Private Lobby:</h1>
+                        <ul id="private_lobbies_list">
+                            <li v-for="lobby in state.lobbies.filter(lobby => !lobby.public)">
+                                {{ lobby.name }} [ <b class="important-txt">{{ lobby.id }}</b> ]
+                                <b v-if="!lobby.players.some(function(p) { return p.computerUserID == playerID; })" style="font-weight: bold; vertical-align: top; font-size: 30px; float: right; line-height: 20px; cursor: pointer" v-on:click="joinLobby(lobby.id)">+</b>
+                                <b v-if="lobby.players.some(function(p) { return p.computerUserID == playerID; })" style="font-weight: bold; vertical-align: top; font-size: 30px; float: right; line-height: 20px; cursor: pointer" v-on:click="disconnectFromLobby">-</b>
+                                <ul>
+                                    <li v-for="player in lobby.players">
+                                        {{ player.username }}
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="collapse-button" v-on:click="collapseLobbyBar">
+                <i v-if="!lobbyBarCollapsed" class="far fa-minus-square"></i>
+                <i v-if="lobbyBarCollapsed" class="fas fa-bars"></i>
+            </div>
+        </div>
+        <div id="game_state" v-if="gameState">
+            <span v-for="player in gameState.players" class="fas fa-child player-token" v-bind:id="'player_token_' + player.id" v-bind:class="getPlayerTextColorClass(player)"></span>
+            <div v-if="playerOwnsALobby && !gameInProgress">
+                <button class="blue" id="start_game_btn" v-on:click="startGame">Start Game</button>
+            </div>
+            <div class="game-ui" v-if="gameInProgress">
+                <div v-if="gameInProgress" class="board">
+                    <div class="center" v-on:click="centerClicked" v-on:mouseover="setInfoTile($event, null)">
+                        <div class="player-stat-container">
+                            <div v-for="(player, index) in gameState.players" class="player-stat" v-bind:class="{ 'player-turn-glow': gameState.currentPlayer.id == player.id }">
+                                <div class="info-row">
+                                    <div class="token"><i class="fas fa-child" v-bind:class="getPlayerTextColorClass(player)"></i></div>
+                                    <div class="name-column">
+                                        <div class="name">&nbsp;&nbsp;{{player.name}}</div>
+                                        <div class="money" v-bind:class="{ 'negative': player.money < 0 }">${{player.money}}</div>
+                                    </div>
+                                </div>
+                                <div style="text-align: right; font-size: 1.5vmin; color: #aaa;">[60 sec]</div>
+                            </div>
+                        </div>
+                        <div class="button-container">
+                            <div class="popup-container" v-if="eventPopupQueue.length">
+                                <div v-for="popup in eventPopupQueue" v-bind:id="popup.id" class="popup">
+                                    <h2 class="title">{{popup.title}}</h2>
+                                    <p>{{popup.message}}</p>
+                                </div>
+                            </div>
+                            <div class="center-panel" id="trade-offers" v-if="showTradeOffersEnabled">
+                                <h2>Trade Offers:</h2>
+                                <div><button class="orange" v-on:click="disableShowTradeOffers">Back</button></div>
+                                <div class="trade-offer" v-for="tradeOffer in gameState.tradeOffers.filter(x => x.playerB.id == gameID)">
+                                    <div class="title">{{ tradeOffer.playerA.name }}</div>
+                                    <div class="outgoing">
+                                        <div class="subtitle">You send:</div>
+                                        <ul>
+                                            <li v-if="tradeOffer.moneyAB < 0">${{ - tradeOffer.moneyAB }}</li>
+                                            <li v-for="prop in tradeOffer.playerBProperties"><span class="property-color-circle" v-bind:class="prop.color"></span>{{ prop.name }}</li>
+                                        </ul>
+                                    </div>
+                                    <div class="incoming">
+                                        <div class="subtitle">You receive:</div>
+                                        <ul>
+                                            <li v-if="tradeOffer.moneyAB > 0">${{ tradeOffer.moneyAB }}</li>
+                                            <li v-for="prop in tradeOffer.playerAProperties"><span v-if="prop.color" class="property-color-circle" v-bind:class="prop.color"></span>{{ prop.name }}</li>
+                                        </ul>
+                                    </div>
+                                    <button class="blue" v-on:click="acceptTrade(tradeOffer.id)">Accept Trade</button>
+                                    <button class="red" v-on:click="rejectTrade(tradeOffer.id)">Reject Trade</button>
+                                </div>
+                            </div>
+                            <div class="center-panel" v-if="createTradeInProgress">
+                                <h2 style="display: inline">Choose Player:</h2>
+                                <select v-model="tradeTargetPlayerID">
+                                    <option v-for="p in otherPlayers" v-bind:value="p.id">
+                                        Player: {{p.name}}
+                                    </option>
+                                </select>
+                                <br />
+                                <div v-if="playerHasExistingTradeOfferWith(tradeTargetPlayerID)">
+                                    <h2>[wait for this player to answer your current trade offer]</h2>
+                                </div>
+                                <div class="trade-options-container" v-if="tradeTargetPlayerID && !playerHasExistingTradeOfferWith(tradeTargetPlayerID)">
+                                    <div class="trade-options">
+                                        <h2>Target Gives You:</h2>
+                                        <ul>
+                                            <li v-for="prop in gameState.tiles.filter(x => x.ownerPlayerID == tradeTargetPlayerID)">
+                                                <input type="checkbox" :id="gameState.tiles.indexOf(prop)" :value="gameState.tiles.indexOf(prop)" v-model="selectedTradeTargetPlayerProperties">
+                                                <label :for="gameState.tiles.indexOf(prop)"><span class="property-color-circle" v-bind:class="prop.color"></span>{{ prop.name }}</label>
+                                            </li>
+                                        </ul>
+                                        <h3 style="display: inline">Money:</h3>
+                                        <input type="text" placeholder="$0" v-model="selectedTradeTargetPlayerMoney" />
+                                    </div>
+                                    <div class="trade-options">
+                                        <h2>You Give Target:</h2>
+                                        <ul>
+                                            <li v-for="prop in gameState.tiles.filter(x => x.ownerPlayerID == gameID)">
+                                                <input type="checkbox" :id="gameState.tiles.indexOf(prop)" :value="gameState.tiles.indexOf(prop)" v-model="selectedTradeMyPlayerProperties">
+                                                <label :for="gameState.tiles.indexOf(prop)"><span class="property-color-circle" v-bind:class="prop.color"></span>{{ prop.name }}</label>
+                                            </li>
+                                        </ul>
+                                        <h3 style="display: inline">Money:</h3>
+                                        <input type="text" placeholder="$0" v-model="selectedTradeMyPlayerMoney" />
+                                    </div>
+                                </div>
+                                <button class="blue" v-on:click="sendTrade" v-if="!playerHasExistingTradeOfferWith(tradeTargetPlayerID)">Send Offer</button>
+                                <button class="red" v-on:click="cancelCreateTrade">Cancel Trade</button>
+                            </div>
+                            <div v-if="isStageTwoAction">
+                                <button class="blue" v-bind:class="{ 'disabled': !canBuy }" v-on:click="buyProperty">Buy Property</button>
+                                <button class="blue" v-bind:class="{ 'disabled': !canAuction }" v-on:click="startAuction">Start Auction</button>
+                                <div v-if="canBetOnAuction">
+                                    <span class="input-icon">
+                                        <input type="text" class="input-small" v-model="betAmount_txt" maxlength="4" value="0" />
+                                        <i>$</i>
+                                    </span>
+                                    <button class="blue" v-on:click="betOnAuction">Bet on Auction</button>
+                                </div>
+                                <div v-if="gameState.auction">
+                                    <h2 v-bind:class="gameState.currentTile.color">{{gameState.currentTile.name}}</h2>
+                                    <ul>
+                                        <li v-for="player in gameState.auction.auctionParticipants">{{player.name}} - <b v-if="player.hasPlacedBet">PLACED BET!</b><b v-if="!player.hasPlacedBet">[WAITING]</b></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div v-if="!isStageTwoAction">
+                                <div class="top">
+                                    <div v-bind:class="{ 'disabled': !canRollDice, 'dice-active': canRollDice }" id="roll_dice_btn" v-on:click="rollDice" class="dice">
+                                        <span v-for="dice in lastDiceRoll"><i class="fas fa-dice-one" v-if="dice == 1"></i><i class="fas fa-dice-two" v-if="dice == 2"></i><i class="fas fa-dice-three" v-if="dice == 3"></i><i class="fas fa-dice-four" v-if="dice== 4"></i><i class="fas fa-dice-five" v-if="dice == 5"></i><i class="fas fa-dice-six" v-if="dice == 6"></i></span>
+                                    </div>
+                                    <button class="red" v-bind:disabled="!canEndTurn" v-bind:class="{ 'disabled': !canEndTurn }" v-on:click="endTurn">End Turn</button>
+                                    <button class="blue" v-if="canPayJailFee" v-on:click="buyOutOfJail">Pay Jail Fee</button>
+                                    <button class="blue" v-if="playerHasTradeOffers" v-on:click="enableShowTradeOffers">Show Trades [{{playersTradeOffers.length}}]</button>
+                                    <button class="red" v-if="canBankruptcy" v-on:click="declareBankruptcy">Bankruptcy</button>
+                                </div>
+                                <div class="bottom">
+                                    <button class="blue" v-bind:class="{ 'disabled': !canBuild, 'button-active-pulse': propertySelectionInProgress && propertySelectionType == 'BuildHouse' }" v-on:click="startBuildHouse">Build</button>
+                                    <button class="orange" v-bind:class="{ 'disabled': !canSell, 'button-active-pulse': propertySelectionInProgress && propertySelectionType == 'SellHouse' }" v-on:click="startSellHouse">Sell</button>
+                                    <button class="blue" v-bind:class="{ 'disabled': !canRedeemProperty, 'button-active-pulse': propertySelectionInProgress && propertySelectionType == 'RedeemProperty' }" v-on:click="startRedeemProperty">Redeem</button>
+                                    <button class="orange" v-bind:class="{ 'disabled': !canMortgageProperty, 'button-active-pulse': propertySelectionInProgress && propertySelectionType == 'MortgageProperty' }" v-on:click="startMortgageProperty">Mortgage</button>
+                                    <button class="blue" v-on:click="startCreateTrade" v-bind:class="{ 'disabled': !canCreateTrade }">Trade</button>
+
+                                </div>
+                            </div>
+                            <div class="tile-info" v-if="infoTile">
+                                <h2 v-bind:class="infoTile.color">{{infoTile.name}}</h2>
+                                <ul v-if="infoTile.type == 'ColorProperty'">
+                                    <li>Normal Rent: <span class="list-value green">&nbsp;${{infoTile.rentAmountPerBuilding[0]}}</span></li>
+                                    <li>(monopoly owned = 2x normal rent)</li>
+                                    <li></li>
+                                    <li>1 House Rent: <span class="list-value green">&nbsp;${{infoTile.rentAmountPerBuilding[1]}}</span></li>
+                                    <li>2 House Rent: <span class="list-value green">&nbsp;${{infoTile.rentAmountPerBuilding[2]}}</span></li>
+                                    <li>3 House Rent: <span class="list-value green">&nbsp;${{infoTile.rentAmountPerBuilding[3]}}</span></li>
+                                    <li>4 House Rent: <span class="list-value green">&nbsp;${{infoTile.rentAmountPerBuilding[4]}}</span></li>
+                                    <li>Hotel Rent: <span class="list-value green">&nbsp;${{infoTile.rentAmountPerBuilding[5]}}</span></li>
+                                    <li></li>
+                                    <li>Building cost: <span class="list-value red">&nbsp;${{infoTile.buildingCost}}</span></li>
+                                    <li></li>
+                                    <li>Mortgage Value: <span class="list-value green">&nbsp;${{infoTile.mortgageValue}}</span></li>
+                                    <li>Redeem Value: <span class="list-value red">&nbsp;${{infoTile.redeemValue}}</span></li>
+                                </ul>
+                                <ul v-if="infoTile.type == 'Railroad'">
+                                    <li>Rent (1 owned): <span class="list-value green">&nbsp;$25</span></li>
+                                    <li>Rent (2 owned): <span class="list-value green">&nbsp;$50</span></li>
+                                    <li>Rent (3 owned): <span class="list-value green">&nbsp;$100</span></li>
+                                    <li>Rent (4 owned): <span class="list-value green">&nbsp;$200</span></li>
+                                    <li></li>
+                                    <li>Mortgage Value: <span class="list-value green">&nbsp;${{infoTile.mortgageValue}}</span></li>
+                                    <li>Redeem Value: <span class="list-value red">&nbsp;${{infoTile.redeemValue}}</span></li>
+                                </ul>
+                                <ul v-if="infoTile.type == 'Utilities'">
+                                    <li>Rent (1 owned): <span class="list-value green">&nbsp;$7 x Roll</span></li>
+                                    <li>Rent (2 owned): <span class="list-value green">&nbsp;$14 x Roll</span></li>
+                                    <li></li>
+                                    <li>Mortgage Value: <span class="list-value green">&nbsp;${{infoTile.mortgageValue}}</span></li>
+                                    <li>Redeem Value: <span class="list-value red">&nbsp;${{infoTile.redeemValue}}</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space corner go" id="0" v-bind:class="getTileClasses(gameState.tiles.filter(x => x.id == 0)[0])">
+                        <div class="container" v-on:mouseover="setInfoTile($event, gameState.tiles[0])">
+                            <div class="instructions">Collect $200.00 salary as you pass</div>
+                            <div class="go-word">go</div>
+                        </div>
+                    </div>
+                    <div class="row horizontal-row bottom-row">
+                        <div v-for="(tile,index) in gameState.tiles.slice(1,10).reverse()" v-bind:id="tile.id" v-bind:class="getTileClasses(tile)" v-on:click="tileClicked" class="space">
+                            <div class="container" v-on:mouseover="setInfoTile($event, tile)">
+                                <i v-if="tile.isMortgaged" class="fas fa-ban mortgaged-ban-symbol"></i>
+                                <div v-if="tile.color" v-bind:class="tile.color" class="color-bar">
+                                    <div class="house-container" v-if="tile.buildingCount && tile.buildingCount < 5"><i v-for="n in tile.buildingCount" class="fas fa-home"></i></div>
+                                    <div class="hotel-container" v-if="tile.buildingCount >= 5"><i class="fas fa-building"></i></div>
+                                </div>
+                                <div class="info">
+                                    <div class="name">{{ tile.name }}</div>
+                                    <i v-if="tile.type == 'Chance'" class="drawing fa fa-question"></i>
+                                    <i v-if="tile.type == 'Railroad'" class="drawing fa fa-subway"></i>
+                                    <i v-if="tile.type == 'CommunityChest'" class="drawing fa fa-cube"></i>
+                                    <div class="price" v-if="tile.cost" v-bind:class="{ 'strikethrough-text': tile.isMortgaged }">${{ tile.cost }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space corner jail" id="10" v-bind:class="getTileClasses(gameState.tiles.filter(x => x.id == 10)[0])" v-on:mouseover="setInfoTile($event, gameState.tiles[10])">
+                        <div class="just">Just</div>
+                        <div class="drawing">
+                            <div class="container">
+                                <div class="name">In</div>
+                                <div class="window">
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <div class="bar"></div>
+                                    <i class="person fa fa-frown-o"></i>
+                                </div>
+                                <div class="name">Jail</div>
+                            </div>
+                        </div>
+                        <div class="visiting">Visiting</div>
+                    </div>
+                    <div class="row vertical-row left-row">
+                        <div v-for="(tile,index) in gameState.tiles.slice(11,20).reverse()" v-bind:id="tile.id" v-bind:class="getTileClasses(tile)" v-on:click="tileClicked" class="space">
+                            <div class="container" v-on:mouseover="setInfoTile($event, tile)">
+                                <i v-if="tile.isMortgaged" class="fas fa-ban mortgaged-ban-symbol"></i>
+                                <div v-if="tile.color" v-bind:class="tile.color" class="color-bar">
+                                    <div class="house-container" v-if="tile.buildingCount && tile.buildingCount < 5"><i v-for="n in tile.buildingCount" class="fas fa-home"></i></div>
+                                    <div class="hotel-container" v-if="tile.buildingCount >= 5"><i class="fas fa-building"></i></div>
+                                </div>
+                                <div class="info">
+                                    <div class="name">{{ tile.name }}</div>
+                                    <i v-if="tile.type == 'Chance'" class="drawing fa fa-question"></i>
+                                    <i v-if="tile.type == 'Railroad'" class="drawing fa fa-subway"></i>
+                                    <i v-if="tile.type == 'CommunityChest'" class="drawing fa fa-cube"></i>
+                                    <div class="price" v-if="tile.cost" v-bind:class="{ 'strikethrough-text': tile.isMortgaged }">${{ tile.cost }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space corner free-parking" id="20" v-bind:class="getTileClasses(gameState.tiles.filter(x => x.id == 20)[0])">
+                        <div class="container" v-on:mouseover="setInfoTile($event, gameState.tiles[20])">
+                            <div class="name">Free</div>
+                            <i class="drawing fa fa-car"></i>
+                            <div class="name">Parking</div>
+                        </div>
+                    </div>
+                    <div class="row horizontal-row top-row">
+                        <div v-for="(tile,index) in gameState.tiles.slice(21,30)" v-bind:id="tile.id" v-bind:class="getTileClasses(tile)" v-on:click="tileClicked" class="space">
+                            <div class="container" v-on:mouseover="setInfoTile($event, tile)">
+                                <i v-if="tile.isMortgaged" class="fas fa-ban mortgaged-ban-symbol"></i>
+                                <div v-if="tile.color" v-bind:class="tile.color" class="color-bar">
+                                    <div class="house-container" v-if="tile.buildingCount && tile.buildingCount < 5"><i v-for="n in tile.buildingCount" class="fas fa-home"></i></div>
+                                    <div class="hotel-container" v-if="tile.buildingCount >= 5"><i class="fas fa-building"></i></div>
+                                </div>
+                                <div class="info">
+                                    <div class="name">{{ tile.name }}</div>
+                                    <i v-if="tile.type == 'Chance'" class="drawing fa fa-question"></i>
+                                    <i v-if="tile.type == 'Railroad'" class="drawing fa fa-subway"></i>
+                                    <i v-if="tile.type == 'CommunityChest'" class="drawing fa fa-cube"></i>
+                                    <div class="price" v-if="tile.cost" v-bind:class="{ 'strikethrough-text': tile.isMortgaged }">${{ tile.cost }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space corner go-to-jail" id="30" v-bind:class="getTileClasses(gameState.tiles.filter(x => x.id == 30)[0])">
+                        <div class="container" v-on:mouseover="setInfoTile($event, gameState.tiles[30])">
+                            <div class="name">Go To</div>
+                            <i class="drawing fa fa-gavel"></i>
+                            <div class="name">Jail</div>
+                        </div>
+                    </div>
+                    <div class="row vertical-row right-row">
+                        <div v-for="(tile,index) in gameState.tiles.slice(31,40)" v-bind:id="tile.id" v-bind:class="getTileClasses(tile)" v-on:click="tileClicked" class="space">
+                            <div class="container" v-on:mouseover="setInfoTile($event, tile)">
+                                <i v-if="tile.isMortgaged" class="fas fa-ban mortgaged-ban-symbol"></i>
+                                <div v-if="tile.color" v-bind:class="tile.color" class="color-bar">
+                                    <div class="house-container" v-if="tile.buildingCount && tile.buildingCount < 5"><i v-for="n in tile.buildingCount" class="fas fa-home"></i></div>
+                                    <div class="hotel-container" v-if="tile.buildingCount >= 5"><i class="fas fa-building"></i></div>
+                                </div>
+                                <div class="info">
+                                    <div class="name">{{ tile.name }}</div>
+                                    <i v-if="tile.type == 'Chance'" class="drawing fa fa-question"></i>
+                                    <i v-if="tile.type == 'Railroad'" class="drawing fa fa-subway"></i>
+                                    <i v-if="tile.type == 'CommunityChest'" class="drawing fa fa-cube"></i>
+                                    <div class="price" v-if="tile.cost" v-bind:class="{ 'strikethrough-text': tile.isMortgaged }">${{ tile.cost }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="game-ui-right">
+                    <div id="game_log" class="game-log">
+                        <h1>Game Log:</h1>
+                        <p v-for="entry in gameLog" v-bind:class="getLogEntryClass(entry)">{{ entry }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tokens" style="display: none">
+        <i class="fas fa-dragon"></i>
+        <i class="fas fa-carrot"></i>
+        <i class="fas fa-cat"></i>
+        <i class="fas fa-broom"></i>
+        <i class="fas fa-crow"></i>
+        <i class="fas fa-fist-raised"></i>
+        <i class="fas fa-toilet-paper"></i>
+        <i class="fas fa-spider"></i>
+        <i class="fas fa-mask"></i>
+        <i class="fas fa-hat-wizard"></i>
+        <i class="fas fa-ghost"></i>
+    </div>
+    <script src="scripts/lib/signalr/signalr.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
