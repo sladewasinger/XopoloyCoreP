@@ -102,7 +102,7 @@ $(function () {
                 return ownedProps;
             },
             gameInProgress: function () {
-                return this.isPlayerInLobby && this.gameState && this.gameState.players.length;
+                return this.isPlayerInLobby && this.gameState && this.gameState.players && this.gameState.players.length;
             },
             isPlayersTurn: function () {
                 return this.gameInProgress &&
@@ -503,7 +503,7 @@ $(function () {
                 this.selectedTradeMyPlaye.money= 0;
             },
             updatePlayerPositions: function (ignoreLogic = false) {
-                if (!this.gameInProgress || this.gameState.players.length == 0)
+                if (!this.gameInProgress || !this.gameState.players || this.gameState.players.length == 0)
                     return;
 
                 //Wait for initial game state to load in Vue:
