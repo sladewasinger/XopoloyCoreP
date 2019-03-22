@@ -21,11 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <TypeScriptCompile Include="scripts\app.ts" />
-    <TypeScriptCompile Include="scripts\LobbyHub.ts" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="Models\" />
     <Folder Include="Logic\" />
     <Folder Include="scripts\lib\" />
