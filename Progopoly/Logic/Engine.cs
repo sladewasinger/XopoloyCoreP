@@ -224,12 +224,13 @@ namespace Progopoly.Logic
             RollDiceAndMovePlayer(gameState.CurrentPlayer.ID, gameState);
         }
 
-        private void SwitchToNextPlayer(GameState gameState)
+        private void SwitchToNextPlayer(GameState gameState, bool incrementListIndex = true)
         {
             if (gameState.GameFinished)
                 return;
 
-            ++gameState.CurrentPlayerListIndex;
+            if (incrementListIndex)
+                ++gameState.CurrentPlayerListIndex;
 
             gameState.Auction = null;
             gameState.WaitForBuyOrAuctionStart = false;
@@ -616,18 +617,18 @@ namespace Progopoly.Logic
 
             _gameLog.Log($"Player '{player.Name}' just declared bankruptcy!");
 
-            var wasCurrentPlayer = playerID == gameState.CurrentPlayer.ID;
+            var playerIdx = gameState.Players.IndexOf(player);
+            var isCurrentPlayerTurn = playerID == gameState.CurrentPlayer.ID;
+            var storedCurrentPlayerListIndex = gameState.CurrentPlayerListIndex;
+
+            if (isCurrentPlayerTurn)
+                SwitchToNextPlayer(gameState, playerIdx < gameState.Players.Count()-1);
+            if (playerIdx <= storedCurrentPlayerListIndex)
+                gameState.CurrentPlayerListIndex--;
 
             gameState.Players.Remove(player);
             if (!gameState.Players.Any())
                 gameState.GameFinished = true;
-
-            gameState.CurrentPlayerListIndex--; //should auto wrap around based on setter
-
-            if (wasCurrentPlayer)
-            {
-                SwitchToNextPlayer(gameState);
-            }
         }
 
         public void OfferTrade(Guid playerA_ID, GameState gameState, Guid playerB_ID, List<int> tileIndexesA, List<int> tileIndexesB, int moneyAB)
