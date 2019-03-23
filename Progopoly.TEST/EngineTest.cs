@@ -60,7 +60,6 @@ namespace Progopoly.TEST
             Assert.AreEqual(initialBoardPosition + 3, newBoardPosition);
         }
 
-
         [TestMethod]
         public void Test1PlayerDiceRollBoardWrap()
         {
@@ -68,12 +67,12 @@ namespace Progopoly.TEST
             var gameState = _engine.CreateInitialGameState(new List<Player>() { tim });
             gameState.Players[0].BoardPosition = gameState.Tiles.Count() - 1;
             _diceRoller.Stub(x => x.Roll(2))
-                .Return(new DiceRoll() { Dice = new int[] { 1, 2 } });
+                .Return(new DiceRoll() { Dice = new int[] { 1, 3 } });
 
             _engine.RollDiceAndMovePlayer(tim.ID, gameState);
 
             var newBoardPosition = gameState.Players.First().BoardPosition;
-            Assert.AreEqual(2, newBoardPosition);
+            Assert.AreEqual(3, newBoardPosition);
         }
 
         [TestMethod]
@@ -369,7 +368,7 @@ namespace Progopoly.TEST
 
             var gameState = _engine.CreateInitialGameState(new List<Player>() { playerA, playerB });
             _diceRoller.Stub(x => x.Roll(2))
-                    .Return(new DiceRoll() { Dice = new int[] { 1, 1 } })
+                    .Return(new DiceRoll() { Dice = new int[] { 5, 5 } })
                     .Repeat.Times(3);
 
             var jail = gameState.Tiles.First(x => x is JailTile) as JailTile;
