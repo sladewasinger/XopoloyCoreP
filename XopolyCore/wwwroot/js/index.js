@@ -142,7 +142,7 @@ $(function () {
                 var canBuild = false;
 
                 if (this.isPlayersTurn && this.ownedProperties.length > 1) {
-                    let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('Color');
+                    let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('color');
                     canBuild = Object.keys(coloredProperties).some(key =>
                         coloredProperties[key].every(prop => prop.ownerPlayerID == this.gameID) &&
                         coloredProperties[key].every(prop => !prop.isMortgaged) &&
@@ -157,7 +157,7 @@ $(function () {
                 var canSell = false;
 
                 if (this.isPlayersTurn && this.ownedProperties.length > 1) {
-                    let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('Color');
+                    let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('color');
                     canSell = Object.keys(coloredProperties).some(key =>
                         coloredProperties[key].some(prop => prop.buildingCount > 0));
                 }
@@ -184,7 +184,7 @@ $(function () {
                     this.ownedProperties.length > 0 &&
                     this.ownedProperties.some(x => !x.isMortgaged);
 
-                let coloredPropertyGroups = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('Color');
+                let coloredPropertyGroups = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('color');
                 let ownedMonopolyColors = Object.keys(coloredPropertyGroups).filter(key => coloredPropertyGroups[key].every(prop => prop.ownerPlayerID == this.gameID));
                 let ownedMonopolies = ownedMonopolyColors.map(k => coloredPropertyGroups[k]);
                 if (ownedMonopolies &&
@@ -282,8 +282,8 @@ $(function () {
                 this.lobbyID_txt = null;
                 this.lobbyName = null;
                 this.gameState = {
-                    Players: [],
-                    Tiles: []
+                    players: [],
+                    tiles: []
                 };
                 connection.invoke("disconnectFromLobby");
             },
@@ -306,12 +306,12 @@ $(function () {
                 this.lobbyID_txt = null;
                 this.lobbyName = null;
                 this.gameState = {
-                    Players: [],
-                    Tiles: []
+                    players: [],
+                    tiles: []
                 };
                 this.state = {
-                    Players: [],
-                    Lobbies: []
+                    players: [],
+                    lobbies: []
                 };
                 this.playerID = null;
                 this.username = null;
@@ -429,7 +429,11 @@ $(function () {
                     return;
                 }
                 var tile = event.currentTarget;
-                var tileID = tile.id;
+                var tileID = parseInt(tile.id);
+
+                if (tileID < 0 || tileID >= 40)
+                    return;
+
                 if (this.gameState.tiles[tileID].ownerPlayerID == this.gameID) {
                     this.tileClickAction(tileID);
                 }
@@ -498,9 +502,9 @@ $(function () {
             },
             clearTradeOfferData: function () {
                 this.selectedTradeTargetPlayerProperties = [];
-                this.selectedTradeTargetPlaye.money= 0;
+                this.selectedTradeTargetPlayer.money= 0;
                 this.selectedTradeMyPlayerProperties = [];
-                this.selectedTradeMyPlaye.money= 0;
+                this.selectedTradeMyPlayer.money= 0;
             },
             updatePlayerPositions: function (ignoreLogic = false) {
                 if (!this.gameInProgress || !this.gameState.players || this.gameState.players.length == 0)
@@ -562,7 +566,7 @@ $(function () {
                 }
 
                 var playerIdx = this.gameState.players.indexOf(player);
-                var playerPrevState = playerIdx != -1 ? this.prevGameState.players[playerIdx] : null;
+                var playerPrevState = (playerIdx != -1 && this.prevGameState.players) ? this.prevGameState.players[playerIdx] : null;
                 if (playerPrevState && player.prevBoardPosition != 0 && currentBoardPosition == 0 && playerPrevState.boardPosition == player.prevBoardPosition) {
                     this.createEventPopup("Salary", player.name + " collected $200 for passing Go!", 1500);
                 }
@@ -674,7 +678,7 @@ $(function () {
                 var canBuild = false;
 
                 if (tile.color && tile.ownerPlayerID == this.gameID && this.ownedProperties.length > 1 && tile.buildingCount < 5) {
-                    let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('Color');
+                    let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('color');
                     canBuild = coloredProperties[tile.color].every(prop => prop.ownerPlayerID == this.gameID && !prop.isMortgaged);
                 }
 
@@ -685,7 +689,7 @@ $(function () {
                     (!tile.buildingCount || tile.buildingCount == 0);
 
                 if (tile.color && tile.ownerPlayerID == this.gameID && this.ownedProperties.length > 1) {
-                    let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('Color');
+                    let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('color');
                     if (coloredProperties[tile.color].some(prop => prop.buildingCount > 0))
                         canMortgage = false;
                 }

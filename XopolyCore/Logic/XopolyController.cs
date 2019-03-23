@@ -32,6 +32,12 @@ namespace Xopoly.Logic
 
         private void PlayerTimedOut(object source, ElapsedEventArgs e)
         {
+            if (GameState.GameFinished || GameState.CurrentPlayer == null)
+            {
+                PlayerTimeoutTimer.AutoReset = false;
+                PlayerTimeoutTimer.Stop();
+                return;
+            }
             var cpID = GameState.CurrentPlayer.ID;
 
             GameLog.Log("*YAWN* Somebody is taking too long. I'm gonna play for you this turn.");

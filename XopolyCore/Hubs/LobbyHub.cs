@@ -56,11 +56,11 @@ namespace XopolyCore.Hubs
 
                 if (string.IsNullOrEmpty(computerUserID) || string.IsNullOrWhiteSpace(username))
                 {
-                    throw new Exception("ComputerUserID or username is empty!");
+                    throw new HubException("ComputerUserID or username is empty!");
                 }
                 if (PlayerRepository.GetPlayerByComputerUserID(computerUserID) != null)
                 {
-                    throw new Exception("Player already registered!");
+                    throw new HubException("Player already registered!");
                 }
 
                 var player = PlayerRepository.CreatePlayer(Context.ConnectionId, computerUserID, username);
@@ -68,7 +68,7 @@ namespace XopolyCore.Hubs
             }
             catch (Exception ex)
             {
-                throw new Exception("Caught exception!", ex);
+                throw new HubException(ex.Message);
             }
         }
 

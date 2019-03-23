@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <TypeScriptToolsVersion>3.1</TypeScriptToolsVersion>
-    <UserSecretsId></UserSecretsId>
+    <UserSecretsId>1bb5505a-f95f-4653-b0af-f7974fbde350</UserSecretsId>
     <ApplicationIcon />
     <OutputType>WinExe</OutputType>
     <StartupObject />

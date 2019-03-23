@@ -22,6 +22,11 @@ namespace Progopoly.Models
                 if (_currentPlayerListIndex >= Players.Count())
                 {
                     _currentPlayerListIndex = 0;
+                } else if (_currentPlayerListIndex < 0)
+                {
+                    _currentPlayerListIndex = Players.Count() - 1;
+                    if (_currentPlayerListIndex < 0)
+                        _currentPlayerListIndex = 0;
                 }
             }
         }

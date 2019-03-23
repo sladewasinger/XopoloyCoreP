@@ -67,23 +67,23 @@ namespace Progopoly.Logic
             }
             if (gameState.CurrentPlayer.CurrentDiceRoll != null && gameState.CurrentPlayer.NumDoublesRolledInARow == 0)
             {
-                _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} was stopped from rolling again on his turn.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' was stopped from rolling again on his turn.");
                 return;
             }
             if (gameState.AuctionInProgress || gameState.WaitForBuyOrAuctionStart)
             {
-                _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} cannot roll until the current property is bought or auctioned.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot roll until the current property is bought or auctioned.");
                 return;
             }
             if (gameState.CurrentPlayer.Money < 0)
             {
-                _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} cannot roll until he sells, mortgages, or declares bankruptcy.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot roll until he sells, mortgages, or declares bankruptcy.");
                 return;
             }
 
             var diceRoll = _diceRoller.Roll(2);
             gameState.CurrentPlayer.CurrentDiceRoll = diceRoll;
-            _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} rolled a {diceRoll}");
+            _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' rolled a {diceRoll}");
 
             if (diceRoll.IsDouble)
             {
@@ -99,14 +99,14 @@ namespace Progopoly.Logic
             {
                 if (gameState.CurrentPlayer.NumDoublesRolledInARow > 0)
                 {
-                    _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} rolled a double and got out of jail!");
+                    _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' rolled a double and got out of jail!");
                     gameState.CurrentPlayer.IsInJail = false;
                 }
                 else if (++gameState.CurrentPlayer.RollsWhileInJail >= 3)
                 {
                     gameState.CurrentPlayer.Money -= Constants.GET_OUT_OF_JAIL_FEE;
                     gameState.CurrentPlayer.IsInJail = false;
-                    _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} paid ${Constants.GET_OUT_OF_JAIL_FEE} to get out of jail.");
+                    _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' paid ${Constants.GET_OUT_OF_JAIL_FEE} to get out of jail.");
                 }
             }
 
@@ -116,7 +116,7 @@ namespace Progopoly.Logic
                 gameState.CurrentPlayer.RollsWhileInJail = 0;
                 if (gameState.CurrentPlayer.NumDoublesRolledInARow >= 3)
                 {
-                    _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} went to jail for over-speeding!");
+                    _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' went to jail for over-speeding!");
                     gameState.CurrentPlayer.BoardPosition = gameState.Tiles.IndexOf(gameState.Tiles.First(x => x is JailTile));
                     gameState.CurrentPlayer.WasDirectMovement = true;
                     gameState.CurrentPlayer.IsInJail = true;
@@ -134,7 +134,7 @@ namespace Progopoly.Logic
 
                 if (targetBoardPosition >= gameState.Tiles.Count())
                 {
-                    _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} collected a salary of ${Constants.GO_TILE_SALARY}!");
+                    _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' collected a salary of ${Constants.GO_TILE_SALARY}!");
                     gameState.CurrentPlayer.Money += Constants.GO_TILE_SALARY;
                     targetBoardPosition -= gameState.Tiles.Count();
                 }
@@ -144,12 +144,12 @@ namespace Progopoly.Logic
                 //Handle passing/landing on GO
                 if (gameState.CurrentPlayer.BoardPosition >= gameState.Tiles.Count())
                 {
-                    _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} collected a salary of ${Constants.GO_TILE_SALARY}!");
+                    _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' collected a salary of ${Constants.GO_TILE_SALARY}!");
                     gameState.CurrentPlayer.Money += Constants.GO_TILE_SALARY;
                     gameState.CurrentPlayer.BoardPosition -= gameState.Tiles.Count();
                 }
 
-                _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} landed on {gameState.CurrentTile.Name}!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' landed on {gameState.CurrentTile.Name}!");
                 gameState.CurrentTile.LandedOnAction(gameState, _gameLog);
             }
         }
@@ -163,17 +163,17 @@ namespace Progopoly.Logic
             }
             if (gameState.CurrentPlayer.CurrentDiceRoll == null)
             {
-                _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} cannot stop his turn without first rolling the dice.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot stop his turn without first rolling the dice.");
                 return;
             }
             if (gameState.WaitForBuyOrAuctionStart || gameState.AuctionInProgress)
             {
-                _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} must buy or auction the current property '{gameState.CurrentTile.Name}' before finishing his turn.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' must buy or auction the current property '{gameState.CurrentTile.Name}' before finishing his turn.");
                 return;
             }
             if (gameState.CurrentPlayer.CurrentDiceRoll.IsDouble && !gameState.CurrentPlayer.IsInJail)
             {
-                _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} must roll again before finishing his turn.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' must roll again before finishing his turn.");
                 return;
             }
             //if (gameState.CurrentPlayer.Money < 0)
@@ -182,7 +182,7 @@ namespace Progopoly.Logic
             //    return;
             //}
 
-            _gameLog.Log($"Player [{gameState.CurrentPlayer.ID}] {gameState.CurrentPlayer.Name} finished his turn.");
+            _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' finished his turn.");
 
             SwitchToNextPlayer(gameState);
             foreach (var player in gameState.Players)
@@ -202,17 +202,17 @@ namespace Progopoly.Logic
             }
             if (!gameState.CurrentPlayer.IsInJail)
             {
-                _gameLog.Log($"Player [{playerID}] cannot buy out of jail because he/she is not in jail!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot buy out of jail because he/she is not in jail!");
                 return;
             }
             if (gameState.CurrentPlayer.Money < Constants.GET_OUT_OF_JAIL_FEE)
             {
-                _gameLog.Log($"Player [{playerID}] cannot buy out of jail because he/she does not have enough money!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot buy out of jail because he/she does not have enough money!");
                 return;
             }
             if (gameState.CurrentPlayer.CurrentDiceRoll != null)
             {
-                _gameLog.Log($"Player [{playerID}] cannot buy out of jail on this turn.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot buy out of jail on this turn.");
                 return;
             }
 
@@ -236,7 +236,7 @@ namespace Progopoly.Logic
             _gameLog.Log($"Current player turn: {gameState.CurrentPlayer.Name}!");
             if (gameState.Players.Take(2).Count() == 1)
             {
-                _gameLog.Log($"Player {gameState.CurrentPlayer.Name} won!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' won!");
             }
         }
 
@@ -251,24 +251,24 @@ namespace Progopoly.Logic
             var propertyTile = gameState.CurrentTile as PropertyTile;
             if (!gameState.WaitForBuyOrAuctionStart || propertyTile == null)
             {
-                _gameLog.Log($"Player [{playerID}] cannot buy right now.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot buy right now.");
                 return;
             }
             if (propertyTile.OwnerPlayerID != null)
             {
-                _gameLog.Log($"Player [{playerID}] cannot but the property because someone already owns that property.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot but the property because someone already owns that property.");
                 return;
             }
             if (gameState.CurrentPlayer.Money < propertyTile.Cost)
             {
-                _gameLog.Log($"Player [{playerID}] cannot afford the property (player money: ${gameState.CurrentPlayer.Money}, cost: ${propertyTile.Cost}).");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot afford the property (player money: ${gameState.CurrentPlayer.Money}, cost: ${propertyTile.Cost}).");
                 return;
             }
 
             gameState.CurrentPlayer.Money -= propertyTile.Cost;
             propertyTile.OwnerPlayerID = gameState.CurrentPlayer.ID;
             gameState.WaitForBuyOrAuctionStart = false;
-            _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} bought property '{propertyTile.Name}'!");
+            _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' bought property '{propertyTile.Name}'!");
         }
 
         public void StartAuctionOnProperty(Guid playerID, GameState gameState)
@@ -282,7 +282,7 @@ namespace Progopoly.Logic
             var propertyTile = gameState.CurrentTile as PropertyTile;
             if (!gameState.WaitForBuyOrAuctionStart || gameState.AuctionInProgress || propertyTile == null)
             {
-                _gameLog.Log($"Player [{playerID}] cannot auction right now.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot auction right now.");
                 return;
             }
             if (gameState.Players.All(x => x.Money == 0))
@@ -299,13 +299,13 @@ namespace Progopoly.Logic
                     .Select(x => new AuctionParticipant(x)).ToList()
             };
 
-            _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} started a blind auction on property '{propertyTile.Name}'! All players with money must bet.");
+            _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' started a blind auction on property '{propertyTile.Name}'! All players with money must bet.");
 
             if (gameState.Auction.AuctionParticipants.Take(2).Count() == 1)
             {
                 var winningParticipant = gameState.Auction.AuctionParticipants.First();
                 winningParticipant.AuctionBet = 1;
-                _gameLog.Log($"Player [{playerID}] {winningParticipant.Name} won the auction and bought property '{propertyTile.Name}' for ${winningParticipant.AuctionBet}!");
+                _gameLog.Log($"Player '{winningParticipant.Name}' won the auction and bought property '{propertyTile.Name}' for ${winningParticipant.AuctionBet}!");
                 gameState.Players.First(x => x.ID == winningParticipant.ID).Money -= (int)winningParticipant.AuctionBet;
                 propertyTile.OwnerPlayerID = winningParticipant.ID;
                 gameState.Auction = null;
@@ -315,19 +315,26 @@ namespace Progopoly.Logic
         public void BetOnAuction(Guid playerID, GameState gameState, int betAmount)
         {
             var propertyTile = gameState.CurrentTile as PropertyTile;
+            var player = gameState.Players.FirstOrDefault(x => x.ID == playerID) ??
+                gameState.Auction?.AuctionParticipants.FirstOrDefault(x => x.ID == playerID);
+            if (player == null)
+            {
+                _gameLog.Log($"Player [{playerID}] cannot be found!");
+                return;
+            }
             if (!gameState.AuctionInProgress || propertyTile == null)
             {
-                _gameLog.Log($"Player [{playerID}] cannot bet because there is no auction in progress!");
+                _gameLog.Log($"Player '{player.Name}' cannot bet because there is no auction in progress!");
                 return;
             }
             if (!gameState.Auction.AuctionParticipants.Any(x => x.ID == playerID))
             {
-                _gameLog.Log($"Player [{playerID}] cannot bet because he/she is not participating in the auction.");
+                _gameLog.Log($"Player '{player.Name}' cannot bet because he/she is not participating in the auction.");
                 return;
             }
             if (gameState.Auction.AuctionParticipants.First(x => x.ID == playerID).AuctionBet != null)
             {
-                _gameLog.Log($"Player [{playerID}] has already placed a bet and cannot bet again.");
+                _gameLog.Log($"Player '{player.Name}' has already placed a bet and cannot bet again.");
                 return;
             }
 
@@ -335,7 +342,7 @@ namespace Progopoly.Logic
             bettingPlayer.AuctionBet = betAmount;
             bettingPlayer.BetPosition = ++gameState.Auction.TotalBets;
 
-            _gameLog.Log($"Player [{playerID}] {bettingPlayer.Name} just placed an auction bet for property '{propertyTile.Name}'.");
+            _gameLog.Log($"Player '{bettingPlayer.Name}' just placed an auction bet for property '{propertyTile.Name}'.");
 
             if (gameState.Auction.AuctionParticipants.All(x => x.AuctionBet != null))
             {
@@ -358,7 +365,7 @@ namespace Progopoly.Logic
                         _gameLog.Log($"There was a tie bet for the auction on property '{propertyTile.Name}'.");
                     }
 
-                    _gameLog.Log($"Player {auctionWinner.Name} wins property '{propertyTile.Name}' for ${auctionWinner.AuctionBet}!");
+                    _gameLog.Log($"Player '{auctionWinner.Name}' wins property '{propertyTile.Name}' for ${auctionWinner.AuctionBet}!");
                     gameState.Players.First(x => x.ID == auctionWinner.ID).Money -= (int)auctionWinner.AuctionBet;
                     propertyTile.OwnerPlayerID = auctionWinner.ID;
                 }
@@ -400,32 +407,32 @@ namespace Progopoly.Logic
             }
             if (tileIndex >= gameState.Tiles.Count() || tileIndex < 0)
             {
-                _gameLog.Log($"Player [{playerID}] can't build a house because no matching tile was found.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' can't build a house because no matching tile was found.");
                 return;
             }
             if (!(gameState.Tiles[tileIndex] is ColorPropertyTile colorPropertyTile))
             {
-                _gameLog.Log($"Player [{playerID}] cannot build a house because that tile is not a colored property tile!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot build a house because that tile is not a colored property tile!");
                 return;
             }
             if (colorPropertyTile.OwnerPlayerID != playerID)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot build because he/she does not own this property!");
+                _gameLog.Log($"Player ['{gameState.CurrentPlayer.Name}' cannot build because he/she does not own this property!");
                 return;
             }
             if (colorPropertyTile.IsMortgaged)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot build because this property is mortgaged!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot build because this property is mortgaged!");
                 return;
             }
             if (colorPropertyTile.BuildingCount >= Constants.MAX_BUILDINGS_ON_PROPERTY)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot build because this property has reached max potential!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot build because this property has reached max potential!");
                 return;
             }
             if (gameState.CurrentPlayer.Money < colorPropertyTile.BuildingCost)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot build because he/she does not have enough money! (cost to build: ${colorPropertyTile.BuildingCost})");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot build because he/she does not have enough money! (cost to build: ${colorPropertyTile.BuildingCost})");
                 return;
             }
 
@@ -435,24 +442,24 @@ namespace Progopoly.Logic
                 .Where(t => t.Color == colorPropertyTile.Color);
             if (!sameColoredProperties.All(p => p.OwnerPlayerID == playerID))
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot build because he/she does not own all the properties of the same color!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot build because he/she does not own all the properties of the same color!");
                 return;
             }
             if (sameColoredProperties.Any(p => Math.Abs(colorPropertyTile.BuildingCount + 1 - p.BuildingCount) > 1))
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot build on this property because buildings must be built evenly on properties of the same color.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot build on this property because buildings must be built evenly on properties of the same color.");
                 return;
             }
             if (sameColoredProperties.Any(p => p.IsMortgaged))
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot build on this property because one or more of the other properties of the same color are mortgaged.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot build on this property because one or more of the other properties of the same color are mortgaged.");
                 return;
             }
 
             gameState.CurrentPlayer.Money -= colorPropertyTile.BuildingCost;
             colorPropertyTile.BuildingCount++;
 
-            _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} just built on property '{colorPropertyTile.Name}'!");
+            _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' just built on property '{colorPropertyTile.Name}'!");
         }
 
         public void MortgageProperty(Guid playerID, GameState gameState, int tileIndex)
@@ -464,27 +471,27 @@ namespace Progopoly.Logic
             }
             if (tileIndex >= gameState.Tiles.Count() || tileIndex < 0)
             {
-                _gameLog.Log($"Player [{playerID}] tried to mortgage a property that doesn't exist! Is he trying to cheat? Get out of here Hugh!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' tried to mortgage a property that doesn't exist! Is he trying to cheat? Get out of here Hugh!");
                 return;
             }
             if (!(gameState.Tiles[tileIndex] is PropertyTile propertyTile))
             {
-                _gameLog.Log($"Player [{playerID}] can only mortgage property tiles!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' can only mortgage property tiles!");
                 return;
             }
             if (propertyTile.OwnerPlayerID != playerID)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot mortgage because he/she does not own this property!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot mortgage because he/she does not own this property!");
                 return;
             }
             if (propertyTile is ColorPropertyTile && (propertyTile as ColorPropertyTile).BuildingCount > 0)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot mortgage a property with buildings on it.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot mortgage a property with buildings on it.");
                 return;
             }
             if (propertyTile.IsMortgaged)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot mortgage this property because it is already mortgaged!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot mortgage this property because it is already mortgaged!");
                 return;
             }
             if (propertyTile is ColorPropertyTile)
@@ -495,7 +502,7 @@ namespace Progopoly.Logic
                     .Where(t => t.Color == (propertyTile as ColorPropertyTile).Color);
                 if (sameColoredProperties.Any(p => p.BuildingCount > 0))
                 {
-                    _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot mortgage this property because other properties of the same color have house(s) on them.");
+                    _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot mortgage this property because other properties of the same color have house(s) on them.");
                     return;
                 }
             }
@@ -513,27 +520,27 @@ namespace Progopoly.Logic
             }
             if (tileIndex >= gameState.Tiles.Count() || tileIndex < 0)
             {
-                _gameLog.Log($"Player [{playerID}] tried to redeem a property that doesn't exist! Is he trying to cheat? Get out of here Hugh!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' tried to redeem a property that doesn't exist! Is he trying to cheat? Get out of here Hugh!");
                 return;
             }
             if (!(gameState.Tiles[tileIndex] is PropertyTile propertyTile))
             {
-                _gameLog.Log($"Player [{playerID}] can only redeem property tiles!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' can only redeem property tiles!");
                 return;
             }
             if (propertyTile.OwnerPlayerID != playerID)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot redeem because he/she does not own this property!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot redeem because he/she does not own this property!");
                 return;
             }
             if (!propertyTile.IsMortgaged)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot redeem this property because it is not mortgaged!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot redeem this property because it is not mortgaged!");
                 return;
             }
             if (gameState.CurrentPlayer.Money < propertyTile.RedeemValue)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot redeem because he/she does not have enough money! (cost to redeem: ${propertyTile.RedeemValue})");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot redeem because he/she does not have enough money! (cost to redeem: ${propertyTile.RedeemValue})");
                 return;
             }
 
@@ -550,22 +557,22 @@ namespace Progopoly.Logic
             }
             if (tileIndex >= gameState.Tiles.Count() || tileIndex < 0)
             {
-                _gameLog.Log($"Player [{playerID}] tried to sell a house on a property that doesn't exist! Is he trying to cheat? Get out of here Hugh!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' tried to sell a house on a property that doesn't exist! Is he trying to cheat? Get out of here Hugh!");
                 return;
             }
             if (!(gameState.Tiles[tileIndex] is ColorPropertyTile colorPropertyTile))
             {
-                _gameLog.Log($"Player [{playerID}] can only sell a house on colored property tiles!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' can only sell a house on colored property tiles!");
                 return;
             }
             if (colorPropertyTile.OwnerPlayerID != playerID)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot sell a house on this property because he/she does not own this property!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot sell a house on this property because he/she does not own this property!");
                 return;
             }
             if (colorPropertyTile.BuildingCount <= 0)
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot sell a house because there are no houses on this property!");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot sell a house because there are no houses on this property!");
                 return;
             }
             var sameColoredProperties = gameState.Tiles
@@ -574,7 +581,7 @@ namespace Progopoly.Logic
                 .Where(t => t.Color == colorPropertyTile.Color);
             if (sameColoredProperties.Any(p => Math.Abs(colorPropertyTile.BuildingCount - 1 - p.BuildingCount) > 1))
             {
-                _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} cannot build on this property because buildings must be built evenly on properties of the same color.");
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot sell this property because buildings must be built evenly on properties of the same color.");
                 return;
             }
 
@@ -607,7 +614,7 @@ namespace Progopoly.Logic
                 }
             }
 
-            _gameLog.Log($"Player [{playerID}] {player.Name} just declared bankruptcy!");
+            _gameLog.Log($"Player '{player.Name}' just declared bankruptcy!");
 
             var wasCurrentPlayer = playerID == gameState.CurrentPlayer.ID;
 
@@ -615,7 +622,7 @@ namespace Progopoly.Logic
             if (!gameState.Players.Any())
                 gameState.GameFinished = true;
 
-            gameState.CurrentPlayerListIndex--;
+            gameState.CurrentPlayerListIndex--; //should auto wrap around based on setter
 
             if (wasCurrentPlayer)
             {
@@ -625,23 +632,17 @@ namespace Progopoly.Logic
 
         public void OfferTrade(Guid playerA_ID, GameState gameState, Guid playerB_ID, List<int> tileIndexesA, List<int> tileIndexesB, int moneyAB)
         {
-            if (playerA_ID != gameState.CurrentPlayer.ID)
-            {
-                _gameLog.Log($"Player [{playerA_ID}] was stopped from going out of turn.");
-                return;
-            }
-
             var playerA = gameState.CurrentPlayer;
             var playerB = gameState.Players.FirstOrDefault(p => p.ID == playerB_ID);
             if (playerB == null)
             {
-                _gameLog.Log($"Player [{playerA_ID}] cannot trade with unknown player B with ID: '{playerB_ID}'");
+                _gameLog.Log($"Player '{playerA.Name}' cannot trade with unknown player B with ID: '{playerB_ID}'");
                 return;
             }
 
             if (gameState.TradeOffers.Any(x => x.PlayerA.ID == playerA_ID && x.PlayerB.ID == playerB_ID))
             {
-                _gameLog.Log($"Player [{playerA_ID}] '{playerA.Name}' is already offering a trade to '{playerB.Name}' and cannot send another trade at this time.");
+                _gameLog.Log($"Player '{playerA.Name}' is already offering a trade to '{playerB.Name}' and cannot send another trade at this time.");
                 return;
             }
 
@@ -660,22 +661,22 @@ namespace Progopoly.Logic
 
             if (moneyAB == 0 && (!propertiesA.Any() || !propertiesB.Any()))
             {
-                _gameLog.Log($"Player [{playerA_ID}] offered an invalid trade! There must be an exchange of goods.");
+                _gameLog.Log($"Player '{playerA.Name}' offered an invalid trade! There must be an exchange of goods.");
                 return;
             }
             if (moneyAB != 0 && !propertiesA.Any() && !propertiesB.Any())
             {
-                _gameLog.Log($"Player [{playerA_ID}] offered an invalid trade! There must be an exchange of goods.");
+                _gameLog.Log($"Player '{playerA.Name}' offered an invalid trade! There must be an exchange of goods.");
                 return;
             }
             if (moneyAB > 0 && propertiesA.Any() && !propertiesB.Any())
             {
-                _gameLog.Log($"Player [{playerA_ID}] offered an invalid trade! Both players must receive goods.");
+                _gameLog.Log($"Player '{playerA.Name}' offered an invalid trade! Both players must receive goods.");
                 return;
             }
             if (moneyAB < 0 && !propertiesA.Any() && propertiesB.Any())
             {
-                _gameLog.Log($"Player [{playerA_ID}] offered an invalid trade! Both players must receive goods.");
+                _gameLog.Log($"Player '{playerA.Name}' offered an invalid trade! Both players must receive goods.");
                 return;
             }
 
@@ -688,17 +689,17 @@ namespace Progopoly.Logic
             var tradeOffer = gameState.TradeOffers.FirstOrDefault(x => x.ID == tradeOfferID);
             if (tradeOffer == null)
             {
-                _gameLog.Log($"Player [{playerB_ID}] {gameState.CurrentPlayer.Name} cannot accept a trade that does not exist!");
+                _gameLog.Log($"Cannot accept a trade that does not exist!");
                 return;
             }
             if (tradeOffer.PlayerA == null || !gameState.Players.Any(p => p.ID == tradeOffer.PlayerA.ID))
             {
-                _gameLog.Log($"Player [{playerB_ID}] {gameState.CurrentPlayer.Name} cannot accept this trade because the initiating player is no longer in the game.");
+                _gameLog.Log($"Cannot accept this trade because the initiating player is no longer in the game.");
                 return;
             }
             if (playerB_ID != tradeOffer.PlayerB.ID)
             {
-                _gameLog.Log($"Player [{playerB_ID}] {gameState.CurrentPlayer.Name} cannot accept this trade because it doesn't involve him/her.");
+                _gameLog.Log($"Cannot accept this trade because it doesn't involve him/her.");
                 return;
             }
 
@@ -733,17 +734,17 @@ namespace Progopoly.Logic
             var tradeOffer = gameState.TradeOffers.FirstOrDefault(x => x.ID == tradeOfferID);
             if (tradeOffer == null)
             {
-                _gameLog.Log($"Player [{playerB_ID}] {gameState.CurrentPlayer.Name} cannot accept a trade that does not exist!");
+                _gameLog.Log($"Player '{playerB_ID}' {gameState.CurrentPlayer.Name} cannot accept a trade that does not exist!");
                 return;
             }
             if (tradeOffer.PlayerA == null || !gameState.Players.Any(p => p.ID == tradeOffer.PlayerA.ID))
             {
-                _gameLog.Log($"Player [{playerB_ID}] {gameState.CurrentPlayer.Name} cannot accept this trade because the initiating player is no longer in the game.");
+                _gameLog.Log($"Player '{playerB_ID}' {gameState.CurrentPlayer.Name} cannot accept this trade because the initiating player is no longer in the game.");
                 return;
             }
             if (playerB_ID != tradeOffer.PlayerB.ID)
             {
-                _gameLog.Log($"Player [{playerB_ID}] {gameState.CurrentPlayer.Name} cannot accept this trade because it doesn't involve him/her.");
+                _gameLog.Log($"Player '{playerB_ID}' {gameState.CurrentPlayer.Name} cannot accept this trade because it doesn't involve him/her.");
                 return;
             }
 
