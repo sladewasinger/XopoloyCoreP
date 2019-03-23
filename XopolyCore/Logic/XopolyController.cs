@@ -210,7 +210,9 @@ namespace Xopoly.Logic
 
         public void DeclareBankruptcy(Guid playerGameID)
         {
+            PlayerTimeoutTimer.Stop();
             _engine.DeclareBankruptcy(playerGameID, GameState);
+            PlayerTimeoutTimer.Start();
         }
 
         public void BuyOutOfJail(Guid playerGameID)
