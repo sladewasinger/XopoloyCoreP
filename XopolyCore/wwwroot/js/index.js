@@ -206,8 +206,7 @@ $(function () {
                     (this.ownedProperties.some(x => x.isMortgaged) || (this.propertySelectionInProgress && this.propertySelectionType == "RedeemProperty"));
             },
             canCreateTrade: function () {
-                return this.isPlayersTurn &&
-                    !this.createTradeInProgress &&
+                return !this.createTradeInProgress &&
                     this.otherPlayers && this.otherPlayers.length > 0;
             },
             lastDiceRoll: function () {
@@ -502,9 +501,9 @@ $(function () {
             },
             clearTradeOfferData: function () {
                 this.selectedTradeTargetPlayerProperties = [];
-                this.selectedTradeTargetPlayer.money= 0;
+                this.selectedTradeTargetPlayerMoney = 0;
                 this.selectedTradeMyPlayerProperties = [];
-                this.selectedTradeMyPlayer.money= 0;
+                this.selectedTradeMyPlayerMoney = 0;
             },
             updatePlayerPositions: function (ignoreLogic = false) {
                 if (!this.gameInProgress || !this.gameState.players || this.gameState.players.length == 0)
@@ -798,16 +797,25 @@ $(function () {
     //START THE HUB:
     // !! NOTE !! All hub connections must be made (in JS) before this line so they are "wired up" before the hub tries to call them.
 
+    async function start() {
+        try {
+            await connection
+                .start()
+                .then(function () {
+                    Main();
+                });
+        } catch (err) {
+            console.error("SignalR connection failed: " + err);
+            console.log("retrying connection in 5 seconds...");
+            setTimeout(() => start(), 5000);
+        }
+    };
 
-    connection
-        .start()
-        .then(function () {
-            Main();
-        })
-        .catch(function (error) {
-            console.error("SignalR connection failed: " + error);
-            //setTimeout(() => window.location.href = '', 7000);
-        });
+    connection.onclose(async () => {
+        await start();
+    });
+
+    start();
 
     //$.connection.hub.url = "/lobbyhub";
     //$.connection.hub.start().done(function () {

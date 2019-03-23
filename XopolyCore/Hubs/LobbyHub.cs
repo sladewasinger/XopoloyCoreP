@@ -13,6 +13,13 @@ namespace XopolyCore.Hubs
 {
     public class LobbyHub : Hub
     {
+        private readonly IHubContext<LobbyHub> _hubContext;
+
+        public LobbyHub(IHubContext<LobbyHub> hubContext)
+        {
+            _hubContext = hubContext;
+        }
+
         public override Task OnDisconnectedAsync(Exception exception)
         {
             var player = PlayerRepository.GetPlayerByConnectionID(Context.ConnectionId);
@@ -186,7 +193,7 @@ namespace XopolyCore.Hubs
 
             lobby.Open = false;
 
-            lobby.XopolyController = new XopolyController(() => SendGameStateAndLog(lobby));
+            lobby.XopolyController = new XopolyController(SendGameStateAndLog, lobby, _hubContext);
             lobby.XopolyController.SetupPlayers(lobby.Players.Where(x => !x.IsSpectator).ToList());
             lobby.XopolyController.StartGame();
 
@@ -469,15 +476,17 @@ namespace XopolyCore.Hubs
             SendGameStateAndLog(lobby);
         }
 
-        private void SendGameStateAndLog(Lobby lobby)
+        private void SendGameStateAndLog(Lobby lobby, IHubContext<LobbyHub> hubContext = null)
         {
             if (lobby == null || lobby.XopolyController == null)
             {
                 return;
             }
 
-            Clients.Clients(lobby.Players.SelectMany(x => x.ConnectionIDs).ToList()).SendAsync("updateGameState", lobby.XopolyController.GameState);
-            Clients.Clients(lobby.Players.SelectMany(x => x.ConnectionIDs).ToList()).SendAsync("updateGameLog", lobby.XopolyController.GameLog.DumpLog().Reverse());
+            hubContext = hubContext ?? _hubContext;
+
+            hubContext.Clients.Clients(lobby.Players.SelectMany(x => x.ConnectionIDs).ToList()).SendAsync("updateGameState", lobby.XopolyController.GameState);
+            hubContext.Clients.Clients(lobby.Players.SelectMany(x => x.ConnectionIDs).ToList()).SendAsync("updateGameLog", lobby.XopolyController.GameLog.DumpLog().Reverse());
         }
 
         private void UpdateClientStates()

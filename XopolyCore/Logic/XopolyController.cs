@@ -4,6 +4,10 @@ using System;
 using System.Timers;
 using Xopoly.Models;
 using Progopoly.Logic;
+using System.Linq;
+using Progopoly.Models.Tiles;
+using Microsoft.AspNetCore.SignalR;
+using XopolyCore.Hubs;
 
 namespace Xopoly.Logic
 {
@@ -14,14 +18,18 @@ namespace Xopoly.Logic
         public GameModels.GameState GameState { get; private set; }
         public GameModels.IGameLog GameLog { get; set; }
         public Timer PlayerTimeoutTimer { get; set; }
-        public Action UpdateClientsAction { get; set; }
+        public Action<Lobby, IHubContext<LobbyHub>> UpdateClientsAction { get; set; }
+        public Lobby ParentLobby { get; set; }
+        public IHubContext<LobbyHub> LobbyHubContext { get; set; }
 
-
-        public XopolyController(Action updateClientsCallback)
+        public XopolyController(Action<Lobby, IHubContext<LobbyHub>> updateClientsCallback, Lobby lobby, IHubContext<LobbyHub> hubContext)
         {
+            ParentLobby = lobby;
+            LobbyHubContext = hubContext;
+
             GameLog = new ServerGameLog();
             _engine = new Engine(new DiceRoller(), GameLog);
-            PlayerTimeoutTimer = new Timer(90 * 1000)
+            PlayerTimeoutTimer = new Timer(20 * 1000)
             {
                 AutoReset = true
             };
@@ -29,6 +37,34 @@ namespace Xopoly.Logic
             UpdateClientsAction = updateClientsCallback;
         }
 
+        private void AutoAuction(object source, ElapsedEventArgs e, GameModels.AuctionParticipant auctionPlayer)
+        {
+            if (auctionPlayer == null || auctionPlayer.AuctionBet != null)
+                return;
+
+            GameLog.Log($"*YAWN* You're taking too long to bet, '{auctionPlayer.Name}'! DUMB-AI 2.0 is now making an educated bet for you...");
+            BetOnAuction(auctionPlayer.ID, Math.Min(auctionPlayer.Money, (GameState.CurrentTile as PropertyTile)?.MortgageValue ?? 0));
+            UpdateClientsAction(ParentLobby, LobbyHubContext);
+        }
+
+        private void SetTimeoutsForAuctionParticipants()
+        {
+            if (!GameState.AuctionInProgress || GameState.Auction == null)
+                return;
+
+            GameLog.Log($"You have 15 seconds to place your bets, or I'll bet for you!");
+            foreach(var player in GameState.Auction.AuctionParticipants)
+            {
+                var timer = new Timer(15 * 1000)
+                {
+                    AutoReset = false,
+                    Enabled = true
+                };
+                timer.Elapsed += (source, e) => AutoAuction(source, e, player);
+                timer.Start();
+            }
+            UpdateClientsAction(ParentLobby, LobbyHubContext);
+        }
 
         private void PlayerTimedOut(object source, ElapsedEventArgs e)
         {
@@ -40,18 +76,81 @@ namespace Xopoly.Logic
             }
             var cpID = GameState.CurrentPlayer.ID;
 
-            GameLog.Log("*YAWN* Somebody is taking too long. I'm gonna play for you this turn.");
+            GameLog.Log("*YAWN* Somebody is taking too long. DUMB-AI 2.0 now has control for this turn...");
 
-            RollDice(cpID);
-            RollDice(cpID);
-            StartAuctionOnProperty(cpID);
-            BetOnAuction(cpID, 1);
-            RollDice(cpID);
+            //Play for the player:
+            if (!GameState.WaitForBuyOrAuctionStart)
+                RollDice(cpID);
+            if (GameState.WaitForBuyOrAuctionStart)
+            {
+                StartAuctionOnProperty(cpID);
+                BetOnAuction(cpID, Math.Min(GameState.CurrentPlayer.Money, (GameState.CurrentTile as PropertyTile)?.MortgageValue ?? 0));
+            }
+
+            if (GameState.CurrentPlayer.CurrentDiceRoll == null || GameState.CurrentPlayer.CurrentDiceRoll.IsDouble)
+            {
+                RollDice(cpID);
+                RollDice(cpID);
+            }
+
+            if (GameState.CurrentPlayer.Money < 0)
+            {
+                var ownedProperties = GameState.Tiles
+                    .Where(x => x is GameModels.Tiles.PropertyTile)
+                    .Select(x => x as GameModels.Tiles.PropertyTile)
+                    .Where(x => x.OwnerPlayerID == cpID)
+                    .Where(x => !x.IsMortgaged);
+
+                var liquidatedAssetsValue = ownedProperties.Sum(prop =>
+                {
+                    var tempValue = prop.MortgageValue;
+
+                    if (prop is GameModels.Tiles.ColorPropertyTile colorProperty)
+                    {
+                        tempValue += colorProperty.BuildingCount * (int)Math.Round(colorProperty.BuildingCost * 0.5);
+                    }
+
+                    return tempValue;
+                });
+
+                if (liquidatedAssetsValue + GameState.CurrentPlayer.Money >= 0)
+                {
+                    GameLog.Log($"Good news! Even though you're in the red, AND you timed out (BM, btw) I'll still go ahead and sell your assets for you.");
+                    foreach (var prop in ownedProperties.OrderBy(x => (x as GameModels.Tiles.ColorPropertyTile)?.BuildingCount))
+                    {
+                        if (GameState.CurrentPlayer.Money >= 0)
+                            break;
+                        if (prop is GameModels.Tiles.ColorPropertyTile colorProperty && colorProperty.BuildingCount > 0)
+                        {
+                            var similarColoredProperties = ownedProperties
+                                .Where(x => x is GameModels.Tiles.ColorPropertyTile)
+                                .Select(x => x as GameModels.Tiles.ColorPropertyTile)
+                                .Where(x => x.Color == colorProperty.Color);
+                            for (int i = 0; i < 16
+                                && similarColoredProperties.Sum(x => x.BuildingCount) > 0
+                                && GameState.CurrentPlayer.Money < 0; i++)
+                            {
+                                var tileID = similarColoredProperties.OrderByDescending(x => x.BuildingCount).First(); //auto pick the largest amount of houses
+                                SellHouse(cpID, GameState.Tiles.IndexOf(tileID));
+                            }
+                        }
+                        else
+                        {
+                            MortgageProperty(cpID, GameState.Tiles.IndexOf(prop));
+                        }
+                    }
+                }
+                else
+                {
+                    GameLog.Log($"Sorry '{GameState.CurrentPlayer.Name}'! I did the calculations and you don't have enough assets to dig yourself out of this one.");
+                    GameLog.Log($"SEE YOU LATER NERD!");
+                    DeclareBankruptcy(cpID);
+                }
+            }
+
             EndTurn(cpID);
 
-            UpdateClientsAction();
-
-            return;
+            UpdateClientsAction(ParentLobby, LobbyHubContext);
         }
 
         public void StartGame()
@@ -63,7 +162,7 @@ namespace Xopoly.Logic
 
         public void SetupPlayers(List<Player> players)
         {
-            foreach(var player in players)
+            foreach (var player in players)
             {
                 var gamePlayer = _engine.CreateNewPlayer(player.Username);
                 player.GameID = gamePlayer.ID;
@@ -91,6 +190,7 @@ namespace Xopoly.Logic
         public void StartAuctionOnProperty(Guid playerGameID)
         {
             _engine.StartAuctionOnProperty(playerGameID, GameState);
+            SetTimeoutsForAuctionParticipants();
         }
 
         public void BetOnAuction(Guid playerGameID, int amount)
