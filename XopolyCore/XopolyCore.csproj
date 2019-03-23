@@ -31,6 +31,8 @@
 
   <ItemGroup>
     <None Include="wwwroot\js\index.js" />
+    <None Include="wwwroot\media\knock-3x.aiff" />
+    <None Include="wwwroot\media\knock-3x.mp3" />
   </ItemGroup>
 
   <ItemGroup>

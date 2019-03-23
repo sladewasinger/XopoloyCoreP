@@ -364,6 +364,9 @@
                     </div>
                 </div>
                 <div class="game-ui-right">
+                    <div class="settings-bar">
+                        <button class="green" v-on:click="toggleSound">Sound {{soundEnabled ? '[ON]' : '[OFF]'}}</button>
+                    </div>
                     <div id="game_log" class="game-log">
                         <h1>Game Log:</h1>
                         <p v-for="entry in gameLog" v-bind:class="getLogEntryClass(entry)">{{ entry }}</p>
@@ -372,6 +375,10 @@
             </div>
         </div>
     </div>
+    <audio id="sound_knock">
+        <source src="media/knock.mp3" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
     <div class="tokens" style="display: none">
         <i class="fas fa-dragon"></i>
         <i class="fas fa-carrot"></i>

@@ -76,7 +76,8 @@ $(function () {
             lobbyBarCollapsed: false,
             localStorageName: 'XOPOLYSTORAGE',
             showTradeOffersEnabled: false,
-            infoTile: null
+            infoTile: null,
+            soundEnabled: true
         },
         computed: {
             isPlayerRegistered: function () {
@@ -718,6 +719,14 @@ $(function () {
                 } else {
                     this.infoTile = null;
                 }
+            },
+            toggleSound: function () {
+                this.soundEnabled = !this.soundEnabled;
+            },
+            onPlayerTurnStart: function () {
+                if (this.soundEnabled) {
+                    document.getElementById('sound_knock').play();
+                }
             }
         }
     })
@@ -732,19 +741,6 @@ $(function () {
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
-    //lobbyHub.client.updateState = function (state) {
-    //    console.log("Received new state:", state);
-    //    vueApp.state = state;
-    //    if (state.player != null) {
-    //        vueApp.updatePlayer(state.player);
-    //    }
-
-    //    if (state.lobbies.some(lobby => lobby.owner.computerUserID == vueApp.playerID)) {
-    //        var ownedLobby = state.lobbies.filter(lobby => lobby.owner.computerUserID == vueApp.playerID)[0];
-    //        vueApp.lobbyName = ownedLobby.name;
-    //    }
-    //};
-
     connection.on("updateState", (state) => {
         console.log("Received new state:", state);
         vueApp.state = state;
@@ -758,26 +754,10 @@ $(function () {
         }
     });
 
-    //lobbyHub.client.updateGameState = function (gameState) {
-    //    console.log("NEW GAME STATE: ", gameState);
-    //    if (!vueApp.gameInProgress) {
-    //        vueApp.lobbyBarCollapsed = true;
-    //    }
-    //    if (gameState.players.length == 0) {
-    //        vueApp.disconnectFromLobby();
-    //        return;
-    //    }
-    //    vueApp.prevGameState = vueApp.gameState;
-    //    vueApp.gameState = gameState;
-    //    vueApp.$nextTick(() => {
-    //        vueApp.updatePlayerPositions();
-    //    });
-    //    vueApp.checkForNotifications();
-    //};
-
     connection.on("updateGameState", (gameState) => {
         console.log("NEW GAME STATE: ", gameState);
         if (!vueApp.gameInProgress) {
+            //first game state:
             vueApp.lobbyBarCollapsed = true;
         }
         if (gameState.players.length == 0) {
@@ -789,14 +769,18 @@ $(function () {
         vueApp.$nextTick(() => {
             vueApp.updatePlayerPositions();
         });
+        if (vueApp.prevGameState
+            && vueApp.prevGameState.currentPlayer
+            && vueApp.prevGameState.currentPlayer.id != vueApp.gameState.currentPlayer.id
+            && vueApp.gameState.currentPlayer.id == vueApp.gameID) {
+            vueApp.onPlayerTurnStart();
+        }
         vueApp.checkForNotifications();
     });
 
     connection.on("updateGameLog", vueApp.updateGameLog);
 
     //START THE HUB:
-    // !! NOTE !! All hub connections must be made (in JS) before this line so they are "wired up" before the hub tries to call them.
-
     async function start() {
         try {
             await connection
