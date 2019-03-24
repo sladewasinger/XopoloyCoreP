@@ -13,6 +13,7 @@ namespace Progopoly.Models
         public static int SINGLE_RAILROAD_FEE = 25;
         public static int STARTING_MONEY = 1500;
         public static int MAX_BUILDINGS_ON_PROPERTY = 5;
+        public static int DEFAULT_TURN_TIMEOUT_SECONDS = 25;
 
         [JsonConverter(typeof(StringEnumConverter))]
         public enum PlayerColor

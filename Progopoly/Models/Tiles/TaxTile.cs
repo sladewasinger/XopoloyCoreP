@@ -16,6 +16,7 @@ namespace Progopoly.Models.Tiles
         {
             gameState.CurrentPlayer.Money -= Cost;
             gameLog.Log($"Player {gameState.CurrentPlayer.Name} just paid ${Cost} in taxes!");
+            OnGameStateUpdated(EventArgs.Empty);
         }
     }
 }

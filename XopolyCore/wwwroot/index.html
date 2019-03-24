@@ -111,13 +111,16 @@
                                         <div class="money" v-bind:class="{ 'negative': player.money < 0 }">${{player.money}}</div>
                                     </div>
                                 </div>
-                                <div style="text-align: right; font-size: 1.5vmin; color: #aaa;">[60 sec]</div>
+                                <div style="text-align: right; font-size: 1.5vmin; color: #aaa;">
+                                    [{{gameState.turnTimeoutSeconds - player.currentTurnElapsedSeconds}}]
+                                </div>
                             </div>
                         </div>
                         <div class="button-container">
                             <div class="popup-container" v-if="eventPopupQueue.length">
                                 <div v-for="popup in eventPopupQueue" v-bind:id="popup.id" class="popup">
-                                    <h2 class="title">{{popup.title}}</h2>
+                                    <h2 class="title">{{popup.title
+                                    }}</h2>
                                     <p>{{popup.message}}</p>
                                 </div>
                             </div>
@@ -205,7 +208,8 @@
                                         <span v-for="dice in lastDiceRoll"><i class="fas fa-dice-one" v-if="dice == 1"></i><i class="fas fa-dice-two" v-if="dice == 2"></i><i class="fas fa-dice-three" v-if="dice == 3"></i><i class="fas fa-dice-four" v-if="dice== 4"></i><i class="fas fa-dice-five" v-if="dice == 5"></i><i class="fas fa-dice-six" v-if="dice == 6"></i></span>
                                     </div>
                                     <button class="red" v-bind:disabled="!canEndTurn" v-bind:class="{ 'disabled': !canEndTurn }" v-on:click="endTurn">End Turn</button>
-                                    <button class="blue" v-if="canPayJailFee" v-on:click="buyOutOfJail">Pay Jail Fee</button>
+                                    <button class="blue" v-if="canUseGOOJFC" v-on:click="useGetOutOfJailFreeCard">Use Card</button>
+                                    <button class="orange" v-if="canPayJailFee" v-on:click="buyOutOfJail">Pay Jail Fee</button>
                                     <button class="blue" v-if="playerHasTradeOffers" v-on:click="enableShowTradeOffers">Show Trades [{{playersTradeOffers.length}}]</button>
                                     <button class="red" v-if="canBankruptcy" v-on:click="declareBankruptcy">Bankruptcy</button>
                                 </div>

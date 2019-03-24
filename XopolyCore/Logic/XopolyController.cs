@@ -8,6 +8,8 @@ using System.Linq;
 using Progopoly.Models.Tiles;
 using Microsoft.AspNetCore.SignalR;
 using XopolyCore.Hubs;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Xopoly.Logic
 {
@@ -18,9 +20,13 @@ namespace Xopoly.Logic
         public GameModels.GameState GameState { get; private set; }
         public GameModels.IGameLog GameLog { get; set; }
         public Timer PlayerTimeoutTimer { get; set; }
-        public Action<Lobby, IHubContext<LobbyHub>> UpdateClientsAction { get; set; }
+        public Action<Lobby, IHubContext<LobbyHub>> UpdateClientsGameState { get; set; }
         public Lobby ParentLobby { get; set; }
         public IHubContext<LobbyHub> LobbyHubContext { get; set; }
+        public Dictionary<string, Action<object[]>> GameMethods;
+        public object _gameMethodLock = new object();
+
+        private class GameMethod : Attribute { }
 
         public XopolyController(Action<Lobby, IHubContext<LobbyHub>> updateClientsCallback, Lobby lobby, IHubContext<LobbyHub> hubContext)
         {
@@ -29,12 +35,20 @@ namespace Xopoly.Logic
 
             GameLog = new ServerGameLog();
             _engine = new Engine(new DiceRoller(), GameLog);
-            PlayerTimeoutTimer = new Timer(20 * 1000)
+
+            PlayerTimeoutTimer = new Timer(1000)
             {
-                AutoReset = true
+                AutoReset = true,
+                Enabled = true
             };
-            PlayerTimeoutTimer.Elapsed += (source, e) => PlayerTimedOut(source, e);
-            UpdateClientsAction = updateClientsCallback;
+            PlayerTimeoutTimer.Elapsed += (source, e) => PlayerTimerTick(source, e);
+            UpdateClientsGameState = updateClientsCallback;
+
+            GameMethods = GetType()
+                .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => Attribute.GetCustomAttribute(m, typeof(GameMethod)) != null)
+                .Select(m => new KeyValuePair<string, Action<object[]>>(m.Name, (Action<object[]>)Delegate.CreateDelegate(typeof(Action<object[]>), this, m)))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
         private void AutoAuction(object source, ElapsedEventArgs e, GameModels.AuctionParticipant auctionPlayer)
@@ -44,7 +58,15 @@ namespace Xopoly.Logic
 
             GameLog.Log($"*YAWN* You're taking too long to bet, '{auctionPlayer.Name}'! DUMB-AI 2.0 is now making an educated bet for you...");
             BetOnAuction(auctionPlayer.ID, Math.Min(auctionPlayer.Money, (GameState.CurrentTile as PropertyTile)?.MortgageValue ?? 0));
-            UpdateClientsAction(ParentLobby, LobbyHubContext);
+            UpdateClientsGameState(ParentLobby, LobbyHubContext);
+        }
+
+        public void CallMethod([CallerMemberName] string methodName = "", params object[] methodArgs)
+        {
+            lock (_gameMethodLock)
+            {
+                GameMethods[methodName].Invoke(methodArgs);
+            }
         }
 
         private void SetTimeoutsForAuctionParticipants()
@@ -53,7 +75,7 @@ namespace Xopoly.Logic
                 return;
 
             GameLog.Log($"You have 15 seconds to place your bets, or I'll bet for you!");
-            foreach(var player in GameState.Auction.AuctionParticipants)
+            foreach (var player in GameState.Auction.AuctionParticipants)
             {
                 var timer = new Timer(15 * 1000)
                 {
@@ -63,10 +85,10 @@ namespace Xopoly.Logic
                 timer.Elapsed += (source, e) => AutoAuction(source, e, player);
                 timer.Start();
             }
-            UpdateClientsAction(ParentLobby, LobbyHubContext);
+            UpdateClientsGameState(ParentLobby, LobbyHubContext);
         }
 
-        private void PlayerTimedOut(object source, ElapsedEventArgs e)
+        private void PlayerTimerTick(object source, ElapsedEventArgs e)
         {
             if (GameState.GameFinished || GameState.CurrentPlayer == null)
             {
@@ -76,6 +98,13 @@ namespace Xopoly.Logic
             }
             var cpID = GameState.CurrentPlayer.ID;
 
+            if (++GameState.CurrentPlayer.CurrentTurnElapsedSeconds < GameState.TurnTimeoutSeconds)
+            {
+                UpdateClientsGameState(ParentLobby, LobbyHubContext);
+                return;
+            }
+
+            GameState.CurrentPlayer.CurrentTurnElapsedSeconds = 0;
             GameLog.Log("*YAWN* Somebody is taking too long. DUMB-AI 2.0 now has control for this turn...");
 
             //Play for the player:
@@ -150,12 +179,19 @@ namespace Xopoly.Logic
 
             EndTurn(cpID);
 
-            UpdateClientsAction(ParentLobby, LobbyHubContext);
+            UpdateClientsGameState(ParentLobby, LobbyHubContext);
+        }
+
+        private void SendGameStateUpdateToClients(object sender, EventArgs e)
+        {
+            UpdateClientsGameState(ParentLobby, LobbyHubContext);
         }
 
         public void StartGame()
         {
-            GameState = _engine.CreateInitialGameState(_players);
+            _engine.GameStateUpdated += SendGameStateUpdateToClients;
+            GameState = _engine.CreateInitialGameState(_players);          
+
             PlayerTimeoutTimer.Enabled = true;
             PlayerTimeoutTimer.Start();
         }
@@ -170,16 +206,17 @@ namespace Xopoly.Logic
             }
         }
 
-        public void RollDice(Guid playerGameID)
+        [GameMethod]
+        public void RollDice(params object[] args)
         {
+            Guid playerGameID = (Guid)args[0];
             _engine.RollDiceAndMovePlayer(playerGameID, GameState);
         }
 
         public void EndTurn(Guid playerGameID)
         {
-            PlayerTimeoutTimer.Stop();
+            GameState.CurrentPlayer.CurrentTurnElapsedSeconds = 0;
             _engine.FinishPlayerTurn(playerGameID, GameState);
-            PlayerTimeoutTimer.Start();
         }
 
         public void BuyProperty(Guid playerGameID)
@@ -210,14 +247,18 @@ namespace Xopoly.Logic
 
         public void DeclareBankruptcy(Guid playerGameID)
         {
-            PlayerTimeoutTimer.Stop();
+            GameState.CurrentPlayer.CurrentTurnElapsedSeconds = 0;
             _engine.DeclareBankruptcy(playerGameID, GameState);
-            PlayerTimeoutTimer.Start();
         }
 
         public void BuyOutOfJail(Guid playerGameID)
         {
             _engine.BuyOutOfJail(playerGameID, GameState);
+        }
+
+        public void UseGetOutOfJailFreeCard(Guid playerGameID)
+        {
+            _engine.UseGetOutOfJailFreeCard(playerGameID, GameState);
         }
 
         public void MortgageProperty(Guid playerGameID, int tileIndex)

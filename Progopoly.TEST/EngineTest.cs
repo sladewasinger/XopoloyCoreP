@@ -402,7 +402,7 @@ namespace Progopoly.TEST
         }
 
         [TestMethod]
-        public void PlayersTurnEndsAfterOverSpeeding()
+        public void PlayersTurnDoesNotEndAfterOverSpeeding()
         {
             var playerA = _engine.CreateNewPlayer("Austin");
             var playerB = _engine.CreateNewPlayer("Elias");
@@ -419,7 +419,7 @@ namespace Progopoly.TEST
             _engine.RollDiceAndMovePlayer(playerA.ID, gameState);
             _engine.BuyOutOfJail(playerA.ID, gameState);
 
-            Assert.AreEqual(playerB.ID, gameState.CurrentPlayer.ID);
+            Assert.AreEqual(playerA.ID, gameState.CurrentPlayer.ID);
             Assert.IsTrue(gameState.Players[0].IsInJail);
         }
 

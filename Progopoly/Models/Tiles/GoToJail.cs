@@ -30,7 +30,10 @@ namespace Progopoly.Models.Tiles
             gameState.CurrentPlayer.BoardPosition = gameState.Tiles.IndexOf(gameState.Tiles.First(x => x is JailTile));
             gameState.CurrentPlayer.WasDirectMovement = true;
             gameState.CurrentPlayer.IsInJail = true;
+            gameState.CurrentPlayer.NumDoublesRolledInARow = 0;
+            gameState.CurrentPlayer.RollsWhileInJail = 0;
             gameLog.Log($"Player {gameState.CurrentPlayer.Name} got sent to jail!");
+            OnGameStateUpdated(EventArgs.Empty);
         }
     }
 }

@@ -36,5 +36,6 @@ namespace Progopoly.Models
         public int RollsWhileInJail { get; set; }
         public PlayerColor Color { get; set; }
         public bool HasGetOutOfJailFreeCard { get; set; }
+        public int CurrentTurnElapsedSeconds { get; set; }
     }
 }

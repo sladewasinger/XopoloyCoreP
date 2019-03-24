@@ -139,6 +139,10 @@ $(function () {
                     this.gameState.currentPlayer.isInJail &&
                     !this.gameState.currentPlayer.currentDiceRoll;
             },
+            canUseGOOJFC: function () {
+                return this.isPlayersTurn &&
+                    this.gameState.currentPlayer.hasGetOutOfJailFreeCard;
+            },
             canBuild: function () {
                 var canBuild = false;
 
@@ -176,7 +180,8 @@ $(function () {
                     !this.propertySelectionInProgress &&
                     !this.gameState.waitForBuyOrAuctionStart &&
                     this.gameState.currentPlayer.money>= 0 &&
-                    (!this.gameState.currentPlayer.currentDiceRoll || this.gameState.currentPlayer.currentDiceRoll.isDouble);
+                    (!this.gameState.currentPlayer.currentDiceRoll ||
+                        (this.gameState.currentPlayer.currentDiceRoll.isDouble && !this.gameState.currentPlayer.isInJail));
             },
             canMortgageProperty: function () {
                 var canMortgage = false;
@@ -383,6 +388,9 @@ $(function () {
             buyOutOfJail: function () {
                 connection.invoke("buyOutOfJail");
             },
+            useGetOutOfJailFreeCard: function () {
+                connection.invoke("useGOOJFC");
+            },
             startBuildHouse: function (event) {
                 event.stopPropagation();
                 if (this.propertySelectionType == "BuildHouse" && this.propertySelectionInProgress) {
@@ -517,30 +525,15 @@ $(function () {
                     if (this.currentUIBoardPositions[player.id] === undefined) {
                         //initial game movement
                         console.log("initial player movement");
-                        this.movePlayerClockwise(player, player.boardPosition);
+                        this.movePlayerDirect(player, player.boardPosition);
                         continue;
                     }
 
-                    //This handles the case of landing on chance and being moved to another board position "instantly"
-                    //i.e. player moves twice, but UI only gets one GameState update.
-                    if (player.prevBoardPosition != this.prevUIBoardPositions[player.id] && player.prevBoardPosition != this.currentUIBoardPositions[player.id]) {
-                        //In-between (technically 2 movements, but only 1 gamestate)
-                        console.log("detected two movements between prev game state and current!");
-                        this.movePlayerClockwise(player, player.prevBoardPosition);
-
-                        window.clearTimeout(this.animationTimeoutHandle);
-                        //this.animationTimeoutHandle = setTimeout(() => this.animationInProgress = false, 1600);
-
-                        //Go DIRECTLY to jail OR go back three spaces OR go to nearest railroad, etc.:
-                        if (player.wasDirectMovement) {
-                            console.log("direct movement");
-                            setTimeout(this.movePlayerDirect, 1500, player, player.boardPosition);
-                        } else {
-                            console.log("clockwise movement");
-                            setTimeout(this.movePlayerClockwise, 1500, player, player.boardPosition);
+                    if (player.isInJail && player.wasDirectMovement && player.boardPosition != this.currentUIBoardPositions[player.id]) {
+                        console.log("direct movement");
+                        if (player.prevBoardPosition != 30) {
+                            this.createEventPopup("Jail", player.name + " got sent to jail for overspeeding!", 2000);
                         }
-                    } else if (player.isInJail && player.wasDirectMovement && player.boardPosition != this.currentUIBoardPositions[player.id]) {
-                        console.log("direct movement to jail for overspeeding!");
                         this.movePlayerDirect(player, player.boardPosition);
                     } else if (player.boardPosition != this.currentUIBoardPositions[player.id]) {
                         //Typical movement:
@@ -571,16 +564,9 @@ $(function () {
                     this.createEventPopup("Salary", player.name + " collected $200 for passing Go!", 1500);
                 }
 
-                if (this.gameState.currentTile.type == "Jail" && player.wasDirectMovement && player.isInJail && currentBoardPosition == 30) {
+                if (targetBoardPosition == 30 && currentBoardPosition == 30) {
+                    console.log("GO TO JAIL", this.gameState.currentTile.type);
                     this.createEventPopup("Jail", player.name + " got sent to jail!", 2000);
-                }
-                if (this.gameState.currentTile.type == "Jail"
-                    && player.wasDirectMovement
-                    && player.isInJail
-                    && player.prevBoardPosition != 30
-                    && playerPrevState && playerPrevState.currentDiceRoll && playerPrevState.currentDiceRoll.isDouble
-                    && currentBoardPosition == playerPrevState.boardPosition) {
-                    this.createEventPopup("Jail", player.name + " got sent to jail for overspeeding!", 2000);
                 }
             },
             createEventPopup: function (title, message, duration) {
@@ -590,13 +576,13 @@ $(function () {
                 eventPopup.duration = duration;
                 eventPopup.id = "event_popup_" + uuidv4();
 
-                let idx = this.eventPopupQueue.push(eventPopup) - 1; //.push() returns length of new array
+                this.eventPopupQueue.push(eventPopup) - 1; //.push() returns length of new array
 
-                setTimeout(function (_this, idx, event) {
+                setTimeout(function (_this, event) {
                     $("#" + event.id).fadeOut("slow", function () {
                         _this.eventPopupQueue = _this.eventPopupQueue.filter(x => x.id != event.id);
                     });
-                }, eventPopup.duration, this, idx, eventPopup);
+                }, eventPopup.duration, this, eventPopup);
             },
             movePlayerClockwise: function (player, targetBoardPosition) {
                 var currentBoardPosition = this.currentUIBoardPositions[player.id] || 0;

@@ -1,9 +1,7 @@
 ﻿using Progopoly.Models;
 using Progopoly.Models.Tiles;
-using Progopoly.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace Progopoly.Logic
@@ -12,6 +10,12 @@ namespace Progopoly.Logic
     {
         private IDiceRoller _diceRoller;
         private IGameLog _gameLog;
+        public event EventHandler GameStateUpdated;
+
+        private void OnGameStateUpdated(EventArgs e)
+        {
+            GameStateUpdated?.Invoke(this, e);
+        }
 
         public Engine(IDiceRoller diceRoller, IGameLog gameLog)
         {
@@ -38,11 +42,13 @@ namespace Progopoly.Logic
             for (var i=0; i<initialGameState.Tiles.Count(); i++)
             {
                 initialGameState.Tiles[i].ID = i;
+                initialGameState.Tiles[i].OnGameStateUpdated = OnGameStateUpdated;
             }
             
             initialGameState.TradeOffers = new List<TradeOffer>();
             initialGameState.CommunityChestDeck = new CommunityChestDeck(_gameLog);
             initialGameState.ChanceDeck = new ChanceDeck(_gameLog);
+            initialGameState.TurnTimeoutSeconds = Constants.DEFAULT_TURN_TIMEOUT_SECONDS;
 
             return initialGameState;
         }
@@ -82,6 +88,10 @@ namespace Progopoly.Logic
             }
 
             var diceRoll = _diceRoller.Roll(2);
+            diceRoll = new DiceRoll()
+            {
+                Dice = new int[] { 5, 5 }
+            };
             gameState.CurrentPlayer.CurrentDiceRoll = diceRoll;
             _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' rolled a {diceRoll}");
 
@@ -150,6 +160,7 @@ namespace Progopoly.Logic
                 }
 
                 _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' landed on {gameState.CurrentTile.Name}!");
+                OnGameStateUpdated(EventArgs.Empty);
                 gameState.CurrentTile.LandedOnAction(gameState, _gameLog);
             }
         }
@@ -191,6 +202,8 @@ namespace Progopoly.Logic
             }
             gameState.ChanceDeck.CurrentPlayerCardText = null;
             gameState.CommunityChestDeck.CurrentPlayerCardText = null;
+
+            OnGameStateUpdated(EventArgs.Empty);
         }
 
         public void BuyOutOfJail(Guid playerID, GameState gameState)
@@ -219,7 +232,38 @@ namespace Progopoly.Logic
             gameState.CurrentPlayer.Money -= Constants.GET_OUT_OF_JAIL_FEE;
             gameState.CurrentPlayer.IsInJail = false;
 
-            _gameLog.Log($"Player [{playerID}] {gameState.CurrentPlayer.Name} paid ${Constants.GET_OUT_OF_JAIL_FEE} to get out of jail!");
+            _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' paid ${Constants.GET_OUT_OF_JAIL_FEE} to get out of jail!");
+
+            RollDiceAndMovePlayer(gameState.CurrentPlayer.ID, gameState);
+        }
+
+        public void UseGetOutOfJailFreeCard(Guid playerID, GameState gameState)
+        {
+            if (playerID != gameState.CurrentPlayer.ID)
+            {
+                _gameLog.Log($"Player [{playerID}] was stopped from rolling out of his turn.");
+                return;
+            }
+            if (!gameState.CurrentPlayer.IsInJail)
+            {
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot use get out of jail card because he/she is not in jail!");
+                return;
+            }
+            if (!gameState.CurrentPlayer.HasGetOutOfJailFreeCard)
+            {
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot use get out of jail card because he/she does not have enough one!");
+                return;
+            }
+            if (gameState.CurrentPlayer.CurrentDiceRoll != null)
+            {
+                _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' cannot get out of jail on this turn.");
+                return;
+            }
+
+            gameState.CurrentPlayer.HasGetOutOfJailFreeCard = false;
+            gameState.CurrentPlayer.IsInJail = false;
+
+            _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' used a get out of jail free card to get out of jail!");
 
             RollDiceAndMovePlayer(gameState.CurrentPlayer.ID, gameState);
         }

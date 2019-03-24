@@ -34,9 +34,8 @@ namespace Progopoly.Models
         public void DrawCard(GameState gameState)
         {
             if (!_cardsQueue.Any())
-            {
                 InitializeDeck();
-            }
+
             var cardAction = _cardsQueue.Dequeue();
             cardAction(gameState);
         }

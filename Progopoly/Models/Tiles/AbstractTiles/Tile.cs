@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using static Progopoly.Models.Constants;
 
 namespace Progopoly.Models.Tiles
@@ -7,7 +8,9 @@ namespace Progopoly.Models.Tiles
     {
         public virtual string Name { get; set; }
         public virtual TileType Type { get; set; }
-        public abstract void LandedOnAction(GameState gameState, IGameLog gameLog);
         public int ID { get; set; }
+        public abstract void LandedOnAction(GameState gameState, IGameLog gameLog);
+        [JsonIgnore]
+        public Action<EventArgs> OnGameStateUpdated;
     }
 }

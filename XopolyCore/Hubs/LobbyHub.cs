@@ -7,7 +7,6 @@ using Xopoly.Logic;
 using Xopoly.Models;
 using Xopoly.Repositories;
 using Xopoly.Utilities;
-using GameModels = Progopoly.Models;
 
 namespace XopolyCore.Hubs
 {
@@ -217,8 +216,9 @@ namespace XopolyCore.Hubs
                 return;
             }
 
-            lobby.XopolyController.RollDice(player.GameID);
-            SendGameStateAndLog(lobby);
+            lobby.XopolyController.CallMethod(methodArgs: player.GameID);
+            //lobby.XopolyController.RollDice(player.GameID);
+            //SendGameStateAndLog(lobby);
         }
 
         public void EndTurn()
@@ -473,6 +473,24 @@ namespace XopolyCore.Hubs
             }
 
             lobby.XopolyController.BuyOutOfJail(player.GameID);
+            SendGameStateAndLog(lobby);
+        }
+
+        public void UseGOOJFC()
+        {
+            var player = PlayerRepository.GetPlayerByComputerUserID(Context.ConnectionId);
+            if (player == null)
+            {
+                return;
+            }
+
+            var lobby = LobbyUtilities.FindLobbyContainingPlayer(player);
+            if (lobby == null || lobby.XopolyController == null)
+            {
+                return;
+            }
+
+            lobby.XopolyController.UseGetOutOfJailFreeCard(player.GameID);
             SendGameStateAndLog(lobby);
         }
 

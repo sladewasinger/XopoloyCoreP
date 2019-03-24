@@ -39,6 +39,7 @@ namespace Progopoly.Models.Tiles
 
                 gameLog.Log($"Player {gameState.CurrentPlayer.Name} just paid {owner.Name} ${cost} to ride the train!");
             }
+            OnGameStateUpdated(EventArgs.Empty);
         }
     }
 }

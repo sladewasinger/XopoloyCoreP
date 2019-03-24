@@ -27,6 +27,7 @@ namespace Progopoly.Models.Tiles
         public override void LandedOnAction(GameState gameState, IGameLog gameLog)
         {
             gameState.CommunityChestDeck.DrawCard(gameState);
+            OnGameStateUpdated(EventArgs.Empty);
         }
     }
 }

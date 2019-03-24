@@ -43,6 +43,7 @@ namespace Progopoly.Models.Tiles
 
                 gameLog.Log($"Player {gameState.CurrentPlayer.Name} just paid {owner.Name} ${cost} in utilities!");
             }
+            OnGameStateUpdated(EventArgs.Empty);
         }
     }
 }

@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using static Progopoly.Models.Constants;
 
 namespace Progopoly.Models.Tiles
@@ -27,6 +24,7 @@ namespace Progopoly.Models.Tiles
         public override void LandedOnAction(GameState gameState, IGameLog gameLog)
         {
             gameState.ChanceDeck.DrawCard(gameState);
+            OnGameStateUpdated(EventArgs.Empty);
         }
     }
 }

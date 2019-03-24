@@ -56,6 +56,7 @@ namespace Progopoly.Models.Tiles
 
                 gameLog.Log($"Player {gameState.CurrentPlayer.Name} just paid {owner.Name} ${Rent} in rent!");
             }
+            OnGameStateUpdated(EventArgs.Empty);
         }
 
         private void ChargePlayer(GameState gameState, Player owner)

@@ -10,6 +10,7 @@ namespace Progopoly.Models
         private int _currentPlayerListIndex;
         public List<Player> Players { get; set; }
         public List<Tile> Tiles { get; set; }
+        public int TurnTimeoutSeconds { get; set; }
         public int CurrentPlayerListIndex
         {
             get
