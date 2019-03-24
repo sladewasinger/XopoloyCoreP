@@ -88,10 +88,6 @@ namespace Progopoly.Logic
             }
 
             var diceRoll = _diceRoller.Roll(2);
-            diceRoll = new DiceRoll()
-            {
-                Dice = new int[] { 5, 5 }
-            };
             gameState.CurrentPlayer.CurrentDiceRoll = diceRoll;
             _gameLog.Log($"Player '{gameState.CurrentPlayer.Name}' rolled a {diceRoll}");
 

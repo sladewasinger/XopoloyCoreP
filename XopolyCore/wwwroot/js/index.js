@@ -141,7 +141,8 @@ $(function () {
             },
             canUseGOOJFC: function () {
                 return this.isPlayersTurn &&
-                    this.gameState.currentPlayer.hasGetOutOfJailFreeCard;
+                    this.gamePlayer.isInJail &&
+                    this.gamePlayer.hasGetOutOfJailFreeCard;
             },
             canBuild: function () {
                 var canBuild = false;
@@ -529,9 +530,9 @@ $(function () {
                         continue;
                     }
 
-                    if (player.isInJail && player.wasDirectMovement && player.boardPosition != this.currentUIBoardPositions[player.id]) {
+                    if (player.wasDirectMovement && player.boardPosition != this.currentUIBoardPositions[player.id]) {
                         console.log("direct movement");
-                        if (player.prevBoardPosition != 30) {
+                        if (player.prevBoardPosition != 30 && player.isInJail) {
                             this.createEventPopup("Jail", player.name + " got sent to jail for overspeeding!", 2000);
                         }
                         this.movePlayerDirect(player, player.boardPosition);
