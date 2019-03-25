@@ -673,11 +673,11 @@ namespace Progopoly.Logic
 
         public void OfferTrade(Guid playerA_ID, GameState gameState, Guid playerB_ID, List<int> tileIndexesA, List<int> tileIndexesB, int moneyAB)
         {
-            var playerA = gameState.CurrentPlayer;
+            var playerA = gameState.Players.FirstOrDefault(p => p.ID == playerA_ID);
             var playerB = gameState.Players.FirstOrDefault(p => p.ID == playerB_ID);
-            if (playerB == null)
+            if (playerB == null || playerA == null)
             {
-                _gameLog.Log($"Player '{playerA.Name}' cannot trade with unknown player B with ID: '{playerB_ID}'");
+                _gameLog.Log($"Cannot find both trade parties. Aborting trade.");
                 return;
             }
 
