@@ -20,6 +20,7 @@ namespace Xopoly.Logic
         public GameModels.GameState GameState { get; private set; }
         public GameModels.IGameLog GameLog { get; set; }
         public Timer PlayerTimeoutTimer { get; set; }
+        public bool TimerPaused { get; set; }
         public Action<Lobby, IHubContext<LobbyHub>> UpdateClientsGameState { get; set; }
         public Lobby ParentLobby { get; set; }
         public IHubContext<LobbyHub> LobbyHubContext { get; set; }
@@ -51,6 +52,14 @@ namespace Xopoly.Logic
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
+        private void UnPauseAuction(object sender, EventArgs e)
+        {
+            if (TimerPaused && (GameState.Auction == null || !GameState.AuctionInProgress))
+            {
+                TimerPaused = false;
+            }
+        }
+
         private void AutoAuction(object source, ElapsedEventArgs e, GameModels.AuctionParticipant auctionPlayer)
         {
             if (auctionPlayer == null || auctionPlayer.AuctionBet != null)
@@ -74,10 +83,10 @@ namespace Xopoly.Logic
             if (!GameState.AuctionInProgress || GameState.Auction == null)
                 return;
 
-            GameLog.Log($"You have 15 seconds to place your bets, or I'll bet for you!");
+            GameLog.Log($"You have 45 seconds to place your bets, or I'll bet for you!");
             foreach (var player in GameState.Auction.AuctionParticipants)
             {
-                var timer = new Timer(15 * 1000)
+                var timer = new Timer(45 * 1000)
                 {
                     AutoReset = false,
                     Enabled = true
@@ -98,7 +107,12 @@ namespace Xopoly.Logic
             }
             var cpID = GameState.CurrentPlayer.ID;
 
-            if (++GameState.CurrentPlayer.CurrentTurnElapsedSeconds < GameState.TurnTimeoutSeconds)
+            if (!TimerPaused)
+            {
+                ++GameState.CurrentPlayer.CurrentTurnElapsedSeconds;
+            }
+
+            if (GameState.CurrentPlayer.CurrentTurnElapsedSeconds < GameState.TurnTimeoutSeconds)
             {
                 UpdateClientsGameState(ParentLobby, LobbyHubContext);
                 return;
@@ -190,6 +204,7 @@ namespace Xopoly.Logic
         public void StartGame()
         {
             _engine.GameStateUpdated += SendGameStateUpdateToClients;
+            _engine.GameStateUpdated += UnPauseAuction;
             GameState = _engine.CreateInitialGameState(_players);          
 
             PlayerTimeoutTimer.Enabled = true;
@@ -226,6 +241,7 @@ namespace Xopoly.Logic
 
         public void StartAuctionOnProperty(Guid playerGameID)
         {
+            TimerPaused = true;
             _engine.StartAuctionOnProperty(playerGameID, GameState);
             SetTimeoutsForAuctionParticipants();
         }
