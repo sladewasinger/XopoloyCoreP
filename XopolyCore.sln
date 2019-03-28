@@ -14,8 +14,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Progopoly", "Progopoly\Prog
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Progopoly.TEST", "Progopoly.TEST\Progopoly.TEST.csproj", "{DB745447-FE2F-4302-810E-BF5E8B39CE7B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TypeScriptClient", "TypeScriptClient\TypeScriptClient.csproj", "{B1E5A87B-8E4F-4D9D-A138-AECF1E80DB9A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,10 +32,6 @@ Global
 		{DB745447-FE2F-4302-810E-BF5E8B39CE7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB745447-FE2F-4302-810E-BF5E8B39CE7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB745447-FE2F-4302-810E-BF5E8B39CE7B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B1E5A87B-8E4F-4D9D-A138-AECF1E80DB9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B1E5A87B-8E4F-4D9D-A138-AECF1E80DB9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B1E5A87B-8E4F-4D9D-A138-AECF1E80DB9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B1E5A87B-8E4F-4D9D-A138-AECF1E80DB9A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
