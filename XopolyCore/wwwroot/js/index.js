@@ -165,7 +165,8 @@ $(function () {
                 if (this.isPlayersTurn && this.ownedProperties.length > 1) {
                     let coloredProperties = this.gameState.tiles.filter(x => x.type == 'ColorProperty').groupBy('color');
                     canSell = Object.keys(coloredProperties).some(key =>
-                        coloredProperties[key].some(prop => prop.buildingCount > 0));
+                        coloredProperties[key].some(prop => prop.buildingCount > 0) &&
+                        coloredProperties[key].every(prop => prop.ownerPlayerID == this.gameID));
                 }
 
                 canSell = canSell || (this.propertySelectionInProgress && this.propertySelectionType == "SellHouse");
@@ -357,7 +358,7 @@ $(function () {
                 if (this.propertySelectionInProgress) {
                     if (tile.ownerPlayerID == this.gameID &&
                         (this.canMortgageTile(tile) && this.propertySelectionType == "MortgageProperty") ||
-                        (tile.isMortgaged && this.propertySelectionType == "RedeemProperty") ||
+                        (tile.isMortgaged && tile.ownerPlayerID == this.gameID && this.propertySelectionType == "RedeemProperty") ||
                         (this.canBuildOnTile(tile) && this.propertySelectionType == "BuildHouse") ||
                         (tile.buildingCount > 0 && this.propertySelectionType == "SellHouse")) {
                         tileClass += " selectable";
