@@ -655,6 +655,12 @@ namespace Progopoly.Logic
                 }
             }
 
+            var trades = gameState.TradeOffers.Where(x => x.PlayerA.ID == player.ID || x.PlayerB.ID == player.ID);
+            foreach(var trade in trades)
+            {
+                gameState.TradeOffers.Remove(trade);
+            }
+
             _gameLog.Log($"Player '{player.Name}' just declared bankruptcy!");
 
             var playerIdx = gameState.Players.IndexOf(player);

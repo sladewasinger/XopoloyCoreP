@@ -24,7 +24,12 @@ namespace XopolyCore
                            .AllowCredentials();
                 }));
 
-            services.AddSignalR().AddAzureSignalR();
+            services.AddSignalR(hubOptions =>
+                {
+                    hubOptions.EnableDetailedErrors = true;
+                    hubOptions.KeepAliveInterval = TimeSpan.FromMinutes(1);
+                })
+            .AddAzureSignalR();
 
         }
 
