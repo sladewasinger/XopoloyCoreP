@@ -198,7 +198,7 @@ namespace Xopoly.Logic
 
         private void SendGameStateUpdateToClients(object sender, EventArgs e)
         {
-            UpdateClientsGameState(ParentLobby, LobbyHubContext);
+                UpdateClientsGameState(ParentLobby, LobbyHubContext);
         }
 
         public void StartGame()

@@ -8,14 +8,18 @@
     <OutputType>WinExe</OutputType>
     <StartupObject />
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <ApplicationInsightsResourceId>/subscriptions/3dd86a2b-8a44-4ea5-aa67-9d2d4c640c6f/resourcegroups/xopolycore-dev/providers/microsoft.insights/components/XopolyCore-Dev</ApplicationInsightsResourceId>
+    <ApplicationInsightsAnnotationResourceId>/subscriptions/3dd86a2b-8a44-4ea5-aa67-9d2d4c640c6f/resourcegroups/xopolycore-dev/providers/microsoft.insights/components/XopolyCore-Dev</ApplicationInsightsAnnotationResourceId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.1.1" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Cors" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Azure.Insights" Version="0.16.0-preview" />
     <PackageReference Include="Microsoft.Azure.SignalR" Version="1.0.7" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
@@ -37,5 +41,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Progopoly\Progopoly.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services" />
   </ItemGroup>
 </Project>
