@@ -19,15 +19,18 @@ namespace XopolyCore
             services.AddCors(options => options.AddPolicy("CorsPolicy",
                 builder =>
                 {
-                    builder.AllowAnyMethod().AllowAnyHeader()
-                           .WithOrigins("http://localhost:55830")
-                           .AllowCredentials();
+                    builder
+                        .AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials();
                 }));
 
             services.AddSignalR(hubOptions =>
                 {
                     hubOptions.EnableDetailedErrors = true;
-                    hubOptions.KeepAliveInterval = TimeSpan.FromMinutes(1);
+                    //hubOptions.KeepAliveInterval = TimeSpan.FromMinutes(1);
+                    //hubOptions.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
                 })
             .AddAzureSignalR();
 
