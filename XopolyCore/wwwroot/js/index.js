@@ -42,6 +42,7 @@ $(function () {
                 players: [],
                 tiles: []
             },
+            gameStateQueue: [],
             prevGameState: {
                 players: [],
                 tiles: []
@@ -77,7 +78,8 @@ $(function () {
             localStorageName: 'XOPOLYSTORAGE',
             showTradeOffersEnabled: false,
             infoTile: null,
-            soundEnabled: true
+            soundEnabled: true,
+            processingGameState: false
         },
         computed: {
             isPlayerRegistered: function () {
@@ -121,7 +123,7 @@ $(function () {
                 return this.isPlayersTurn &&
                     !this.propertySelectionInProgress &&
                     this.gameState.waitForBuyOrAuctionStart &&
-                    this.gameState.currentPlayer.money>= this.gameState.currentTile.cost;
+                    this.gameState.currentPlayer.money >= this.gameState.currentTile.cost;
             },
             canAuction: function () {
                 return this.isPlayersTurn &&
@@ -130,7 +132,7 @@ $(function () {
             },
             canBetOnAuction: function () {
                 return this.gameState.auction &&
-                    this.gamePlayer.money> 0 &&
+                    this.gamePlayer.money > 0 &&
                     !this.gameState.auction.auctionParticipants.filter(x => x.id == this.gameID)[0].hasPlacedBet;
             },
             canPayJailFee: function () {
@@ -175,13 +177,13 @@ $(function () {
             },
             canBankruptcy: function () {
                 return this.isPlayersTurn
-                    && this.gameState.currentPlayer.money< 0;
+                    && this.gameState.currentPlayer.money < 0;
             },
             canRollDice: function () {
                 return this.isPlayersTurn &&
                     !this.propertySelectionInProgress &&
                     !this.gameState.waitForBuyOrAuctionStart &&
-                    this.gameState.currentPlayer.money>= 0 &&
+                    this.gameState.currentPlayer.money >= 0 &&
                     (!this.gameState.currentPlayer.currentDiceRoll ||
                         (this.gameState.currentPlayer.currentDiceRoll.isDouble && !this.gameState.currentPlayer.isInJail));
             },
@@ -517,7 +519,7 @@ $(function () {
                 this.selectedTradeMyPlayerMoney = 0;
             },
             updatePlayerPositions: function (ignoreLogic = false) {
-                if (!this.gameInProgress || !this.gameState.players || this.gameState.players.length == 0)
+                if (!this.gameInProgress || !this.gameState.players || this.gameState.players.length == 0 || this.animationInProgress)
                     return;
 
                 //Wait for initial game state to load in Vue:
@@ -533,7 +535,9 @@ $(function () {
 
                     if (player.wasDirectMovement && player.boardPosition != this.currentUIBoardPositions[player.id]) {
                         console.log("direct movement");
-                        if (player.prevBoardPosition != 30 && player.isInJail) {
+                        if (player.prevBoardPosition != 30 && player.isInJail
+                            && !this.gameState.chanceDeck.currentPlayerCardText
+                            && !this.gameState.communityChestDeck.currentPlayerCardText) {
                             this.createEventPopup("Jail", player.name + " got sent to jail for overspeeding!", 2000);
                         }
                         this.movePlayerDirect(player, player.boardPosition);
@@ -561,8 +565,8 @@ $(function () {
                 }
 
                 var playerIdx = this.gameState.players.indexOf(player);
-                var playerPrevState = (playerIdx != -1 && this.prevGameState.players) ? this.prevGameState.players[playerIdx] : null;
-                if (playerPrevState && player.prevBoardPosition != 0 && currentBoardPosition == 0 && playerPrevState.boardPosition == player.prevBoardPosition) {
+                //var playerPrevState = (playerIdx != -1 && this.prevGameState.players) ? this.prevGameState.players[playerIdx] : null;
+                if (player.prevBoardPosition != 0 && currentBoardPosition == 0) {
                     this.createEventPopup("Salary", player.name + " collected $200 for passing Go!", 1500);
                 }
 
@@ -693,7 +697,7 @@ $(function () {
                 if (this.prevGameState.auction && !this.gameState.auction) {
                     var auctionedProperty = this.gameState.tiles.find(t => t.id == this.prevGameState.currentTile.id);
                     var auctionWinner = this.gameState.players.find(x => x.id == auctionedProperty.ownerPlayerID);
-                    var auctionWinnerBetAmount = this.prevGameState.players.find(x => x.id == auctionWinner.id).money- auctionWinner.money;
+                    var auctionWinnerBetAmount = this.prevGameState.players.find(x => x.id == auctionWinner.id).money - auctionWinner.money;
                     var msg = "Player '" + auctionWinner.name + "' won auction for property '" + auctionedProperty.name + "' for $" +
                         auctionWinnerBetAmount + "!";
                     this.createEventPopup("Auction Finished", msg, 2000);
@@ -715,6 +719,27 @@ $(function () {
                 if (this.soundEnabled) {
                     document.getElementById('sound_knock').play();
                 }
+            },
+            processGameStateQueue: function () {
+                if (this.processingGameState)
+                    return;
+                this.processingGameState = true;
+
+                while (this.gameStateQueue.length) {
+                    var tGameState = this.gameStateQueue.shift();
+                    console.log("processing game state", tGameState);
+                    this.prevGameState = this.gameState;
+                    this.gameState = tGameState;
+
+                    if (!this.animationInProgress) {
+                        this.$nextTick(() => {
+                            this.updatePlayerPositions();
+                        });
+                    }
+                }
+
+                this.processingGameState = false;
+                requestAnimationFrame(this.processGameStateQueue);
             }
         }
     })
@@ -747,16 +772,15 @@ $(function () {
         if (!vueApp.gameInProgress) {
             //first game state:
             vueApp.lobbyBarCollapsed = true;
+            requestAnimationFrame(vueApp.processGameStateQueue);
         }
         if (gameState.players.length == 0) {
             vueApp.disconnectFromLobby();
             return;
         }
-        vueApp.prevGameState = vueApp.gameState;
-        vueApp.gameState = gameState;
-        vueApp.$nextTick(() => {
-            vueApp.updatePlayerPositions();
-        });
+
+        vueApp.gameStateQueue.push(gameState);
+
         if (vueApp.prevGameState
             && vueApp.prevGameState.currentPlayer
             && vueApp.prevGameState.currentPlayer.id != vueApp.gameState.currentPlayer.id
