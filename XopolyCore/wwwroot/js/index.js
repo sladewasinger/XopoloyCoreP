@@ -731,11 +731,12 @@ $(function () {
                     this.prevGameState = this.gameState;
                     this.gameState = tGameState;
 
-                    if (!this.animationInProgress) {
-                        this.$nextTick(() => {
-                            this.updatePlayerPositions();
-                        });
+                    if (this.animationInProgress) {
+                        break;
                     }
+                    this.$nextTick(() => {
+                        this.updatePlayerPositions();
+                    });
                 }
 
                 this.processingGameState = false;
