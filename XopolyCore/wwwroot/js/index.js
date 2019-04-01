@@ -732,7 +732,7 @@ $(function () {
                 }
                 this.createEventPopup("Trade Rejected!", playerName + " rejected your trade!", 2500, "trade-rejected-event-popup");
             },
-            acceptedTrade: function () {
+            acceptedTrade: function (tradeID) {
                 var trade = this.gameState.tradeOffers.find(x => x.id == tradeID);
                 let playerName = "Player";
                 if (trade != null) {
