@@ -1021,3 +1021,13 @@ h1, h2, h3, h4, h5, h6 {
         color: #444;
     }
 }
+
+.popup.trade-rejected-event-popup {
+    border: 2vmin solid #f00;
+    background-color: #fee;
+}
+
+.popup.trade-accepted-event-popup {
+    border: 2vmin solid #00f;
+    background-color: #eef;
+}

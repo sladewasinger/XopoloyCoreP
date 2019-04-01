@@ -575,12 +575,13 @@ $(function () {
                     this.createEventPopup("Jail", player.name + " got sent to jail!", 2000);
                 }
             },
-            createEventPopup: function (title, message, duration) {
+            createEventPopup: function (title, message, duration, cssClass = "") {
                 let eventPopup = {};
                 eventPopup.title = title;
                 eventPopup.message = message;
                 eventPopup.duration = duration;
                 eventPopup.id = "event_popup_" + uuidv4();
+                eventPopup.class = cssClass;
 
                 this.eventPopupQueue.push(eventPopup) - 1; //.push() returns length of new array
 
@@ -720,6 +721,28 @@ $(function () {
                     document.getElementById('sound_knock').play();
                 }
             },
+            rejectedTrade: function (tradeID) {
+                var trade = this.gameState.tradeOffers.find(x => x.id == tradeID);
+                let playerName = "Player";
+                if (trade != null) {
+                    let p = this.gameState.players.find(x => x.id == trade.playerB.id);
+                    if (p != null) {
+                        playerName = p.name;
+                    }
+                }
+                this.createEventPopup("Trade Rejected!", playerName + " rejected your trade!", 25000, "trade-rejected-event-popup");
+            },
+            acceptedTrade: function () {
+                var trade = this.gameState.tradeOffers.find(x => x.id == tradeID);
+                let playerName = "Player";
+                if (trade != null) {
+                    let p = this.gameState.players.find(x => x.id == trade.playerB.id);
+                    if (p != null) {
+                        playerName = p.name;
+                    }
+                }
+                this.createEventPopup("Trade Rejected!", playerName + " accepted your trade!", 25000, "trade-accepted-event-popup");
+            },
             processGameStateQueue: function () {
                 if (this.processingGameState)
                     return;
@@ -767,6 +790,9 @@ $(function () {
             vueApp.lobbyName = ownedLobby.name;
         }
     });
+
+    connection.on("rejectedTrade", vueApp.rejectedTrade);
+    connection.on("acceptedTrade", vueApp.acceptedTrade);
 
     connection.on("updateGameState", (gameState) => {
         console.log("NEW GAME STATE: ", gameState);

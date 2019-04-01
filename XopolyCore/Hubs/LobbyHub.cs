@@ -398,7 +398,14 @@ namespace XopolyCore.Hubs
                 return;
             }
 
-            lobby.XopolyController.AcceptTrade(player.GameID, tradeOfferID);
+            lobby.XopolyController.AcceptTrade(player.GameID, tradeOfferID, (playerA_ID) =>
+            {
+                var pA = lobby.Players.FirstOrDefault(x => x.GameID == playerA_ID);
+                if (pA != null)
+                {
+                    Clients.Clients(pA.ConnectionIDs).SendAsync("acceptedTrade", tradeOfferID);
+                }
+            });
             SendGameStateAndLog(lobby);
         }
 
@@ -416,7 +423,14 @@ namespace XopolyCore.Hubs
                 return;
             }
 
-            lobby.XopolyController.RejectTrade(player.GameID, tradeOfferID);
+            lobby.XopolyController.RejectTrade(player.GameID, tradeOfferID, (playerA_ID) =>
+            {
+                var pA = lobby.Players.FirstOrDefault(x => x.GameID == playerA_ID);
+                if (pA != null)
+                {
+                    Clients.Clients(pA.ConnectionIDs).SendAsync("rejectedTrade", tradeOfferID);
+                }
+            });
             SendGameStateAndLog(lobby);
         }
 

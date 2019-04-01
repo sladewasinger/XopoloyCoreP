@@ -300,13 +300,23 @@ namespace Xopoly.Logic
             _engine.OfferTrade(playerGameID, GameState, targetPlayerID, tileIndexesA, tileIndexesB, moneyA - moneyB);
         }
 
-        public void AcceptTrade(Guid playerGameID, Guid tradeOfferID)
+        public void AcceptTrade(Guid playerGameID, Guid tradeOfferID, Action<Guid> acceptTradeCallback)
         {
+            var trade = GameState.TradeOffers.FirstOrDefault(t => t.ID == tradeOfferID);
+            if (trade != null)
+            {
+                acceptTradeCallback(trade.PlayerA.ID);
+            }
             _engine.AcceptTradeOffer(playerGameID, GameState, tradeOfferID);
         }
 
-        public void RejectTrade(Guid playerGameID, Guid tradeOfferID)
+        public void RejectTrade(Guid playerGameID, Guid tradeOfferID, Action<Guid> rejectTradeCallback)
         {
+            var trade = GameState.TradeOffers.FirstOrDefault(t => t.ID == tradeOfferID);
+            if (trade != null)
+            {
+                rejectTradeCallback(trade.PlayerA.ID);
+            }
             _engine.RejectTradeOffer(playerGameID, GameState, tradeOfferID);
         }
     }
