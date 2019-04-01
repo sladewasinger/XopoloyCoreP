@@ -362,7 +362,7 @@ $(function () {
                         (this.canMortgageTile(tile) && this.propertySelectionType == "MortgageProperty") ||
                         (tile.isMortgaged && tile.ownerPlayerID == this.gameID && this.propertySelectionType == "RedeemProperty") ||
                         (this.canBuildOnTile(tile) && this.propertySelectionType == "BuildHouse") ||
-                        (tile.buildingCount > 0 && this.propertySelectionType == "SellHouse")) {
+                        (tile.ownerPlayerID == this.gameID && tile.buildingCount > 0 && this.propertySelectionType == "SellHouse")) {
                         tileClass += " selectable";
                     } else {
                         tileClass += " unselectable";
@@ -528,13 +528,13 @@ $(function () {
 
                     if (this.currentUIBoardPositions[player.id] === undefined) {
                         //initial game movement
-                        console.log("initial player movement");
+                        //console.log("initial player movement");
                         this.movePlayerDirect(player, player.boardPosition);
                         continue;
                     }
 
                     if (player.wasDirectMovement && player.boardPosition != this.currentUIBoardPositions[player.id]) {
-                        console.log("direct movement");
+                        //console.log("direct movement");
                         if (player.prevBoardPosition != 30 && player.isInJail
                             && !this.gameState.chanceDeck.currentPlayerCardText
                             && !this.gameState.communityChestDeck.currentPlayerCardText) {
@@ -543,11 +543,11 @@ $(function () {
                         this.movePlayerDirect(player, player.boardPosition);
                     } else if (player.boardPosition != this.currentUIBoardPositions[player.id]) {
                         //Typical movement:
-                        console.log("normal movement");
+                        //console.log("normal movement");
                         this.movePlayerClockwise(player, player.boardPosition);
                     } else if (ignoreLogic) {
                         //assume window update:
-                        console.log("window update player position");
+                        //console.log("window update player position");
                         this.movePlayerDirect(player, player.boardPosition, 1, true);
                     }
                 }
@@ -727,7 +727,7 @@ $(function () {
 
                 while (this.gameStateQueue.length) {
                     var tGameState = this.gameStateQueue.shift();
-                    console.log("processing game state", tGameState);
+                    //console.log("processing game state", tGameState);
                     this.prevGameState = this.gameState;
                     this.gameState = tGameState;
 

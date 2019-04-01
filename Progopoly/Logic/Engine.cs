@@ -1,5 +1,6 @@
 ﻿using Progopoly.Models;
 using Progopoly.Models.Tiles;
+using Progopoly.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +36,6 @@ namespace Progopoly.Logic
 
             for (var i = 0; i < initialGameState.Players.Count(); i++)
             {
-                initialGameState.Players[i].TurnOrder = i + 1;
                 initialGameState.Players[i].Color = (Constants.PlayerColor)(i + 1);
             }
 
@@ -51,6 +51,11 @@ namespace Progopoly.Logic
             initialGameState.TurnTimeoutSeconds = Constants.DEFAULT_TURN_TIMEOUT_SECONDS;
 
             return initialGameState;
+        }
+
+        public void ShufflePlayerOrder(GameState gameState)
+        {
+            gameState.Players.Shuffle();
         }
 
         public Player CreateNewPlayer(string playerName)
@@ -413,6 +418,8 @@ namespace Progopoly.Logic
 
                 gameState.Auction = null;
             }
+
+            OnGameStateUpdated(EventArgs.Empty);
         }
 
         public void InstantMonopoly(Guid playerID, GameState gameState)

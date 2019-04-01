@@ -31,7 +31,6 @@ namespace Progopoly.Models
         public bool WasDirectMovement { get; set; }
         public int NumDoublesRolledInARow { get; set; }
         public DiceRoll CurrentDiceRoll { get; set; }
-        public int TurnOrder { get; set; }
         public bool IsInJail { get; set; }
         public int RollsWhileInJail { get; set; }
         public PlayerColor Color { get; set; }

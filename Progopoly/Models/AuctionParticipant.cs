@@ -30,7 +30,6 @@ namespace Progopoly.Models
             BoardPosition = player.BoardPosition;
             NumDoublesRolledInARow = player.NumDoublesRolledInARow;
             CurrentDiceRoll = player.CurrentDiceRoll;
-            TurnOrder = player.TurnOrder;
             IsInJail = player.IsInJail;
             RollsWhileInJail = player.RollsWhileInJail;
         }

@@ -205,7 +205,10 @@ namespace Xopoly.Logic
         {
             _engine.GameStateUpdated += SendGameStateUpdateToClients;
             _engine.GameStateUpdated += UnPauseAuction;
-            GameState = _engine.CreateInitialGameState(_players);          
+
+            GameState = _engine.CreateInitialGameState(_players);
+
+            _engine.ShufflePlayerOrder(GameState);
 
             PlayerTimeoutTimer.Enabled = true;
             PlayerTimeoutTimer.Start();
