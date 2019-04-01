@@ -730,7 +730,7 @@ $(function () {
                         playerName = p.name;
                     }
                 }
-                this.createEventPopup("Trade Rejected!", playerName + " rejected your trade!", 25000, "trade-rejected-event-popup");
+                this.createEventPopup("Trade Rejected!", playerName + " rejected your trade!", 2500, "trade-rejected-event-popup");
             },
             acceptedTrade: function () {
                 var trade = this.gameState.tradeOffers.find(x => x.id == tradeID);
@@ -741,7 +741,7 @@ $(function () {
                         playerName = p.name;
                     }
                 }
-                this.createEventPopup("Trade Rejected!", playerName + " accepted your trade!", 25000, "trade-accepted-event-popup");
+                this.createEventPopup("Trade Rejected!", playerName + " accepted your trade!", 2500, "trade-accepted-event-popup");
             },
             processGameStateQueue: function () {
                 if (this.processingGameState)
