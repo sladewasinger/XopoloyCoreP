@@ -749,14 +749,15 @@ $(function () {
                 this.processingGameState = true;
 
                 while (this.gameStateQueue.length) {
+                    if (this.animationInProgress) {
+                        break;
+                    }
+
                     var tGameState = this.gameStateQueue.shift();
                     //console.log("processing game state", tGameState);
                     this.prevGameState = this.gameState;
                     this.gameState = tGameState;
 
-                    if (this.animationInProgress) {
-                        break;
-                    }
                     this.$nextTick(() => {
                         this.updatePlayerPositions();
                     });
