@@ -436,6 +436,7 @@ namespace XopolyCore.Hubs
 
         public void InstantMonopoly()
         {
+            return;
             var player = PlayerRepository.GetPlayerByComputerUserID(Context.ConnectionId);
             if (player == null)
             {
