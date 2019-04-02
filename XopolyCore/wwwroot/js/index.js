@@ -132,6 +132,7 @@ $(function () {
             },
             canBetOnAuction: function () {
                 return this.gameState.auction &&
+                    this.gamePlayer &&
                     this.gamePlayer.money > 0 &&
                     !this.gameState.auction.auctionParticipants.filter(x => x.id == this.gameID)[0].hasPlacedBet;
             },
