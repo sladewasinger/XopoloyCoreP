@@ -264,6 +264,16 @@ namespace Xopoly.Logic
             _engine.InstantMonopoly(playerGameID, GameState);
         }
 
+        public void TurnOnWeightedDice(params int[] dice)
+        {
+            _engine.TurnOnWeightedDice(dice);
+        }
+
+        public void TurnOffWeightedDice(params int[] dice)
+        {
+            _engine.TurnOffWeightedDice();
+        }
+
         public void DeclareBankruptcy(Guid playerGameID)
         {
             GameState.CurrentPlayer.CurrentTurnElapsedSeconds = 0;

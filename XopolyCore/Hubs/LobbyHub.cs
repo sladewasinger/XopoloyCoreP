@@ -453,6 +453,40 @@ namespace XopolyCore.Hubs
             SendGameStateAndLog(lobby);
         }
 
+        public void TurnOnWeightedDice(params int[] dice)
+        {
+            var player = PlayerRepository.GetPlayerByComputerUserID(Context.ConnectionId);
+            if (player == null)
+            {
+                return;
+            }
+
+            var lobby = LobbyUtilities.FindLobbyContainingPlayer(player);
+            if (lobby == null || lobby.XopolyController == null)
+            {
+                return;
+            }
+
+            lobby.XopolyController.TurnOnWeightedDice(dice);
+        }
+
+        public void TurnOffWeightedDice()
+        {
+            var player = PlayerRepository.GetPlayerByComputerUserID(Context.ConnectionId);
+            if (player == null)
+            {
+                return;
+            }
+
+            var lobby = LobbyUtilities.FindLobbyContainingPlayer(player);
+            if (lobby == null || lobby.XopolyController == null)
+            {
+                return;
+            }
+
+            lobby.XopolyController.TurnOffWeightedDice();
+        }
+
         public void DeclareBankruptcy()
         {
             var player = PlayerRepository.GetPlayerByComputerUserID(Context.ConnectionId);

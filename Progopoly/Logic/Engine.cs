@@ -443,7 +443,39 @@ namespace Progopoly.Logic
             orangeProperties[2].OwnerPlayerID = player.ID;
 
             _gameLog.Log($"Player [{playerID}] {player.Name} just got a monopoly! (heh heh heh)");
+        }
 
+        private class FakeDiceRoller : IDiceRoller
+        {
+            public int[] FakeDice { get; set; }
+
+            public FakeDiceRoller(int[] fakeDice)
+            {
+                FakeDice = fakeDice;
+            }
+
+            public DiceRoll Roll(int numDice)
+            {
+                return new DiceRoll()
+                {
+                    Dice = FakeDice
+                };
+            }
+        }
+
+        private IDiceRoller _backupDiceRoller;
+
+        public void TurnOnWeightedDice(int[] fakeDice)
+        {
+            if (!(_diceRoller is FakeDiceRoller))
+                _backupDiceRoller = _diceRoller;
+
+            _diceRoller = new FakeDiceRoller(fakeDice);
+        }
+
+        public void TurnOffWeightedDice()
+        {
+            _diceRoller = _backupDiceRoller;
         }
 
         public void BuyAndBuildHouse(Guid playerID, GameState gameState, int tileIndex)

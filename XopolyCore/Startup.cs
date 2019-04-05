@@ -26,14 +26,7 @@ namespace XopolyCore
                         .AllowCredentials();
                 }));
 
-            services.AddSignalR(hubOptions =>
-                {
-                    hubOptions.EnableDetailedErrors = true;
-                    //hubOptions.KeepAliveInterval = TimeSpan.FromMinutes(1);
-                    //hubOptions.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
-                })
-            .AddAzureSignalR();
-
+            services.AddSignalR();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -43,7 +36,7 @@ namespace XopolyCore
             app.UseStaticFiles();
             app.UseFileServer();
             app.UseCors("CorsPolicy");
-            app.UseAzureSignalR(routes =>
+            app.UseSignalR(routes =>
             {
                 routes.MapHub<LobbyHub>("/lobbyhub");
             });

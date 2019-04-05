@@ -471,6 +471,12 @@ $(function () {
             instantMonopoly: function (tileIndex) {
                 connection.invoke("instantMonopoly");
             },
+            turnOnWeightedDice: function () {
+                connection.invoke("turnOnWeightedDice", arguments);
+            },
+            turnOffWeightedDice: function () {
+                connection.invoke("turnOffWeightedDice");
+            },
             getLogEntryClass: function (entry) {
                 let playerID = extractGuid(entry);
                 if (playerID) {
@@ -520,7 +526,8 @@ $(function () {
                 this.selectedTradeMyPlayerMoney = 0;
             },
             updatePlayerPositions: function (ignoreLogic = false) {
-                if (!this.gameInProgress || !this.gameState.players || this.gameState.players.length == 0 || this.animationInProgress)
+                if (!this.gameInProgress || !this.gameState.players || this.gameState.players.length == 0 || this.animationInProgress
+                    || !this.gameState || !this.gameState.tiles || !this.gameState.tiles.length)
                     return;
 
                 //Wait for initial game state to load in Vue:
@@ -776,12 +783,12 @@ $(function () {
 
     //.net core client:
     const connection = new signalR.HubConnectionBuilder()
-        .withUrl("/lobbyhub")
+        .withUrl("/XopolyCoreP/lobbyhub")
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
     connection.on("updateState", (state) => {
-        console.log("Received new state:", state);
+        //console.log("Received new state:", state);
         vueApp.state = state;
         if (state.player != null) {
             vueApp.updatePlayer(state.player);
@@ -797,7 +804,7 @@ $(function () {
     connection.on("acceptedTrade", vueApp.acceptedTrade);
 
     connection.on("updateGameState", (gameState) => {
-        console.log("NEW GAME STATE: ", gameState);
+        //console.log("NEW GAME STATE: ", gameState);
         if (!vueApp.gameInProgress) {
             //first game state:
             vueApp.lobbyBarCollapsed = true;
@@ -808,7 +815,10 @@ $(function () {
             return;
         }
 
-        vueApp.gameStateQueue.push(gameState);
+        if (!vueApp.gameState) {
+            vueApp.gameState = gameState;
+            vueApp.prevGameState = gameState;
+        }
 
         if (vueApp.prevGameState
             && vueApp.prevGameState.currentPlayer
@@ -816,6 +826,10 @@ $(function () {
             && vueApp.gameState.currentPlayer.id == vueApp.gameID) {
             vueApp.onPlayerTurnStart();
         }
+
+        vueApp.gameStateQueue.push(gameState);
+
+
         vueApp.checkForNotifications();
     });
 
